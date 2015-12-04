@@ -1,11 +1,11 @@
 # cpp-crosslogger
 Crossplatform C/C++ logger with runtime analysis functions
 
-Platforms support:
+## Platforms support:
 - Windows
 - POSIX (Linux, CygWin, etc)
 
-Functions:
+## Functions:
 - Quickly logging (caches header processing)
 - Determination of the name of DLL from which the function was called
 - Displays a list of DLLs with file version information
@@ -19,24 +19,33 @@ Functions:
 - Scrolling log file by file size, scrolling at each start, limiting the number of files
 - Support for 32-bit and 64-bit architectures
 
-Fast examples:
+## Fast examples:
 
-code:
+### Code:
+```
     LOG_INFO("Hello world! Ten: %d, string: %s!!",10,"ABCDEFG");
-result in log:
+```
+### Result in log:
+```
     [INFO] 04.12.2015 16:47:27.676 [6152:6744] [loggertest.exe!main] Hello world! Ten: 10, string: ABCDEFG!!
-
-code:
+```
+### Code:
+```
     LOG_WARNING("Testing warning at $(srcfile), line $(line)");
-result in log:
+```
+### Result in log:
+```
     [WARNING] 04.12.2015 16:47:27.676 [6152:6744] [loggertest.exe!main] Testing warning at loggertest.cpp, line 185
+```
 
-
-code:
+### Code:
+```
     char t[128];
     for (int i=0; i<128; i++) t[i] = i;
     LOG_BINARY_ERROR(t,sizeof(t));
-result in log:
+```
+### Result in log:
+```
     [ERROR] 04.12.2015 16:47:35.519 [6152:6744] [loggertest.exe!main] 
     0000: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F |................
     0010: 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F |................
@@ -46,10 +55,13 @@ result in log:
     0050: 50 51 52 53 54 55 56 57 58 59 5A 5B 5C 5D 5E 5F |PQRSTUVWXYZ[\]^_
     0060: 60 61 62 63 64 65 66 67 68 69 6A 6B 6C 6D 6E 6F |`abcdefghijklmno
     0070: 70 71 72 73 74 75 76 77 78 79 7A 7B 7C 7D 7E 7F |pqrstuvwxyz{|}~
-    
-code:
+``` 
+### Code:
+```
     LOG_MODULES_DEBUG;
-result in log:
+```
+### Result in log:
+```
     [DEBUG] 04.12.2015 16:47:35.511 [6152:6744] [loggertest.exe!main]
     Base	Size	Module name	Image name	Version info
     ------------------------------------------------
@@ -59,10 +71,13 @@ result in log:
     0x000007FEFCEF0000	438272	KERNELBASE.dll	C:\Windows\system32\KERNELBASE.dll	LangId:4B00409	FileVersion:"6.1.7600.16385 (win7_rtm.090713-1255)"	ProductVersion:"6.1.7600.16385"	CompanyName:"Microsoft Corporation"	FileDescription:"Windows NT BASE API Client DLL"	
     0x0000000076AB0000	1024000	USER32.dll	C:\Windows\system32\USER32.dll	LangId:4B00409	FileVersion:"6.1.7600.16385 (win7_rtm.090713-1255)"	ProductVersion:"6.1.7600.16385"	CompanyName:"Microsoft Corporation"	FileDescription:"Multi-User Windows USER API Client DLL"	
     ...
-
-code:
+```
+### Code:
+```
     LOG_STACKTRACE_DEBUG;
-result in log:
+```
+### Result in log:
+```
     [DEBUG] 04.12.2015 16:47:28.777 [6152:6744] [loggertest.exe!TestFunction] Stack trace:
     [2] <-- TestFunction +215 bytes [FUNCTION: TestFunction] [Line: f:\work\logger\samples\loggertest\loggertest.cpp(70) +0 bytes] [Mod:  loggertest, base: 000000013F5E0000] 
      Offset: 0x000000013F607427 Sym:  type: PDB, file: F:\WORK\logger\bin\Debug_x64\loggertest.exe
@@ -78,4 +93,4 @@ result in log:
      Offset: 0x0000000076BCF56D Sym:  type: -exported-, file: C:\Windows\system32\kernel32.dll
     [8] <-- RtlUserThreadStart +33 bytes [FUNCTION: RtlUserThreadStart] [Mod:  ntdll, base: 0000000076CD0000] 
      Offset: 0x0000000076D03281 Sym:  type: -exported-, file: C:\Windows\SYSTEM32\ntdll.dll
-    
+```    

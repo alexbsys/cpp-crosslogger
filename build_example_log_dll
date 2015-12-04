@@ -1,0 +1,4 @@
+#!/bin/sh
+
+gcc -DLOG_USE_DLL=1 example_log_dll/example_log_dll.cpp logger/loggerdll.c -o build/example_log_dll -ldl
+

@@ -1,0 +1,8 @@
+LIBRARY loggerdll.dll
+EXPORTS
+	__c_logger_log
+	__c_logger_log_args
+	__c_logger_log_binary
+	__c_logger_log_modules
+	__c_logger_log_stack_trace
+
