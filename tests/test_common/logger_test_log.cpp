@@ -22,9 +22,9 @@
 #	define LOG_TEST_DO_NOT_WRITE_FILE 0
 #	define LOG_RELEASE_ON_APP_CRASH 1
 
-#include "logger/logger.h"
+#include "log/logger.h"
 
-DEFINE_LOGGER;
+DEFINE_LOGGER();
 
 bool get_line_skip_empty(std::ifstream& infile, std::string& line)
 {
@@ -238,7 +238,7 @@ TEST_F(logger_tests_log, check_strong_header)
 	std::remove(logging::configurator.get_full_log_file_path().c_str());
 	
 	int millisec;
-	struct tm timeinfo = logging::utils::get_time(millisec);
+	struct tm timeinfo = logging::detail::utils::get_time(millisec);
 
 	LOG_INFO("TEST-INFO");
 

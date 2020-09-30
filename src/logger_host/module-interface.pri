@@ -1,0 +1,12 @@
+
+MODULE_LOGGER_HOST = 1
+
+MODULE_LOGGER_HOST_PROJECT = logger_host
+MODULE_LOGGER_HOST_INCLUDES = $${MODULES_ROOT_DIR}/logger/logger_host/include
+MODULE_LOGGER_HOST_LIBS = -llogger_host
+
+unix:!macx {
+  MODULE_LOGGER_HOST_LIBS += -ldl
+}
+
+MODULE_LOGGER_HOST_DEPS =
