@@ -1144,6 +1144,44 @@ enum logger_verbose_level {
 #  define DEFINE_LOGGER()
 #endif //defined(__cplusplus) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
 
+
+
+//////////// Multithreading defines
+#if LOG_MULTITHREADED
+
+#ifdef LOG_PLATFORM_WINDOWS
+#define LOG_MT_EVENT_TYPE HANDLE
+#define LOG_MT_THREAD_HANDLE_TYPE   HANDLE
+
+#define LOG_MT_MUTEX CRITICAL_SECTION
+#define LOG_MT_MUTEX_INIT(x, y) InitializeCriticalSection(x)
+#define LOG_MT_MUTEX_LOCK(x) EnterCriticalSection(x)
+#define LOG_MT_MUTEX_UNLOCK(x) LeaveCriticalSection(x)
+#define LOG_MT_MUTEX_DESTROY(x) DeleteCriticalSection(x)
+#define LOG_MT_THREAD_EXIT(x) ExitThread(x)
+#else  // LOG_PLATFORM_WINDOWS
+
+#define LOG_MT_EVENT_TYPE pthread_cond_t
+#define LOG_MT_THREAD_HANDLE_TYPE   pthread_t
+
+#define LOG_MT_MUTEX pthread_mutex_t
+#define LOG_MT_MUTEX_INIT pthread_mutex_init
+#define LOG_MT_MUTEX_LOCK pthread_mutex_lock
+#define LOG_MT_MUTEX_UNLOCK pthread_mutex_unlock
+#define LOG_MT_MUTEX_DESTROY pthread_mutex_destroy
+#define LOG_MT_THREAD_EXIT pthread_exit
+
+#endif  // LOG_PLATFORM_WINDOWS
+
+#endif  // LOG_MULTITHREADED
+
+
+
+
+
+
+
+
 #if LOG_USE_OWN_VSNPRINTF
 
 // Put a character to buffer
@@ -1674,25 +1712,93 @@ typedef unsigned int intptr_t;
 #endif  // defined(_AMD64_) || defined(__LP64__) || defined(_LP64)
 
 
+namespace cfg {
+  typedef std::pair<std::string, std::string> KeyValueType;
+  typedef std::list<KeyValueType> KeyValueTypeList;
+}//namespace cfg
+
 
 namespace detail {
   class log_stream;
 }//namespace detail
 
+struct logger_interface;
+
+enum log_plugin_type {
+  kLogPluginTypeInvalid = 0,
+  kLogPluginTypeOutput = 1,
+  kLogPluginTypeConfigMacro = 2,
+  kLogPluginTypeConfig = 3,
+  kLogPluginTypeHeaderMacro = 4,
+  kLogPluginTypeCommand = 5,
+
+  kLogPluginTypeMin = 1,
+  kLogPluginTypeMax = 5
+};
+
+struct logger_plugin_interface {
+  virtual ~logger_plugin_interface() {}
+
+  virtual int plugin_type() const { return kLogPluginTypeInvalid; }
+
+  virtual const char* type() const { return ""; }
+
+  virtual const char* name() const { return ""; }
+
+  virtual const char* dependencies() const {
+    return "";
+  }
+
+  /**
+  * \brief    configuration update handler. Logger called this method every time when configuration has been updated
+  */
+  virtual void config_updated(const logging::cfg::KeyValueTypeList& config) {}
+
+  virtual bool attach(logger_interface* logger) { return false; }
+  virtual void detach(logger_interface* logger) {}
+};
 
 /**
  * \struct    logger_output_interface interface. User can implement this interface for custom
  *            output implementation
  */
-struct logger_output_interface {
+struct logger_output_interface : public virtual logger_plugin_interface {
   virtual ~logger_output_interface() {}
+
+  virtual int plugin_type() const { return kLogPluginTypeOutput; }
 
   /** 
    * \brief    write method. Called every write to file operation
    */
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) {}
+
+  /**
+   * \brief    flush output method
+   */
+  virtual void flush() {}
+
+  /**
+   * \brief    close output method
+   */
+  virtual void close() {}
 };
 
+
+struct logger_config_macro_plugin_interface : public virtual logger_plugin_interface {
+  virtual ~logger_config_macro_plugin_interface() {}
+
+  virtual int plugin_type() const { return kLogPluginTypeConfigMacro; }
+
+  virtual bool process(std::string& str) { return false;  }
+};
+
+struct logger_config_plugin_interface : public virtual logger_plugin_interface {
+  virtual ~logger_config_plugin_interface() {}
+
+  virtual int plugin_type() const { return kLogPluginTypeConfig; }
+
+  virtual bool reload(cfg::KeyValueTypeList& config) { return false;  }
+};
 
 /**
 * \struct   logger_interface  interface. User do not need to use it directly, only via
@@ -1721,11 +1827,17 @@ struct logger_interface {
   virtual detail::log_stream stream(int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number) = 0;
 
+  /** Flush all outputs */
+  virtual void flush() = 0;
+
+  /** Reload configuration */
+  virtual void reload_config() = 0;
+
   /** Add logger output interface */
-  virtual void add_output(logger_output_interface* output_interface) = 0;
+  virtual void add_plugin(logger_plugin_interface* plugin_interface) = 0;
 
   /** Remove logger output interface */
-  virtual void remove_output(logger_output_interface* output_interface) = 0;
+  virtual void remove_plugin(logger_plugin_interface* plugin_interface) = 0;
 
 #if LOG_USE_MODULEDEFINITION
   /** Log all loaded modules information */
@@ -2407,6 +2519,37 @@ class utils {
 #endif  // LOG_PLATFORM_WINDOWS
 
     return newtime;
+  }
+
+  static void create_directory_path(const std::string& path) {
+#ifdef LOG_PLATFORM_WINDOWS
+    SHCreateDirectoryExA(NULL, path.c_str(), NULL);
+#else   // LOG_PLATFORM_WINDOWS
+    mkpath(path.c_str(), 0777);
+#endif  // LOG_PLATFORM_WINDOWS
+  }
+
+
+  static void delete_file(const std::string& file_path_for_delete) {
+#ifdef LOG_PLATFORM_WINDOWS
+    DeleteFileA(file_path_for_delete.c_str());
+#else  // LOG_PLATFORM_WINDOWS
+
+#ifdef LOG_HAVE_UNISTD_H
+    unlink(file_path_for_delete.c_str());
+#else   // LOG_HAVE_UNISTD_H
+    std::remove(file_path_for_delete.c_str());
+#endif  // LOG_HAVE_UNISTD_H
+#endif /*LOG_PLATFORM_WINDOWS*/
+  }
+
+  static void move_file(const std::string& src_path, const std::string& dest_path) {
+#ifdef LOG_PLATFORM_WINDOWS
+    MoveFileExA(src_path.c_str(), dest_path.c_str(),
+      MOVEFILE_WRITE_THROUGH | MOVEFILE_REPLACE_EXISTING);
+#else   // LOG_PLATFORM_WINDOWS
+    rename(src_path.c_str(), dest_path.c_str());
+#endif  // LOG_PLATFORM_WINDOWS
   }
 
 #ifndef LOG_PLATFORM_WINDOWS
@@ -3343,6 +3486,91 @@ static const char* default_hdr_format =
 
 }//namespace detail
 
+ //LogSysInfo
+ //Verbose
+ //HeaderFormat
+
+ //LogPath
+ //LogFileName
+ //ScrollFileCount
+ //ScrollFileSize
+ //ScrollFileEveryRun
+ //RegistryConfigPath
+
+
+
+
+namespace detail {
+namespace cfg {
+  using namespace logging::cfg;
+
+  static std::string get_value(
+    const KeyValueTypeList& params,
+    const std::string& param_name,
+    const std::string& default_value = std::string(),
+    bool* is_found = nullptr) {
+    if (is_found) *is_found = false;
+
+    for (const KeyValueType& param : params) {
+      if (param.first == param_name) {
+        if (is_found) *is_found = true;
+        return param.second;
+      }
+    }
+
+    return default_value;
+  }
+
+  static void set_value(
+    KeyValueTypeList& params,
+    const std::string& param_name,
+    const std::string& new_value,
+    std::string* prev_value = nullptr,
+    bool* is_found = nullptr) {
+    if (is_found) *is_found = false;
+    if (prev_value) *prev_value = std::string();
+
+    for (KeyValueType& param : params) {
+      if (param.first == param_name) {
+        if (is_found) *is_found = true;
+        if (prev_value) *prev_value = param.second;
+
+        param.second = new_value;
+        return;
+      }
+    }
+
+    KeyValueType keyval(param_name, new_value);
+    params.push_back(keyval);
+  }
+
+  static bool has_value(
+    const KeyValueTypeList& params,
+    const std::string& param_name) {
+    for (const KeyValueType& param : params) {
+      if (param.first == param_name)
+        return true;
+    }
+    return false;
+  }
+
+  static size_t values_count(
+    const KeyValueTypeList& params,
+    const std::string& param_name) {
+    size_t count = 0;
+
+    for (const KeyValueType& param : params) {
+      if (param.first == param_name)
+        ++count;
+    }
+    return count;
+  }
+
+}//namespace cfg
+}//namespace detail
+
+
+
 class log_configurator {
  public:
   log_configurator()
@@ -3558,7 +3786,7 @@ class log_configurator {
 #if LOG_TEST_DO_NOT_WRITE_FILE
 #include <sstream>
 #undef LOG_FLUSH_FILE_EVERY_WRITE
-#define LOG_FLUSH_FILE_EVERY_WRITE 1
+#define LOG_FLUSH_FILE_EVERY_WRITE 1l
 #endif  // LOG_TEST_DO_NOT_WRITE_FILE
 
 extern log_configurator configurator;
@@ -4389,26 +4617,98 @@ class logger_file_output : public logger_output_interface {
 public:
   virtual ~logger_file_output() {}
 
+  logger_file_output(const char* output_name = NULL) 
+    : log_flush_every_write_(false)
+    , cur_file_size_(0)
+    , name_(output_name == NULL ? std::string() : output_name)
+    , first_write_(true) {
+  }
+
+  const char* type() const {
+    return "file_output";
+  }
+
+  const char* name() const {
+    return name_.c_str();
+  }
+
+  void config_updated(const logging::cfg::KeyValueTypeList& config) {
+    std::string prev_full_log_file_path = config_.full_log_file_path_;
+    std::string prev_log_path = config_.log_path_;
+
+    config_.scroll_file_size_ = configurator.get_log_scroll_file_size();
+    config_.log_path_ = configurator.get_log_path();
+    config_.log_file_name_ = configurator.get_log_file_name();
+    config_.scroll_file_count_ = configurator.get_log_scroll_file_count();
+    config_.scroll_file_every_run_ = configurator.get_log_scroll_file_every_run();
+
+    config_.full_log_file_path_ = config_.log_path_ + detail::utils::get_path_separator() + config_.log_file_name_;
+
+    if (config_.log_path_ != prev_log_path && config_.create_log_directory_) {
+      utils::create_directory_path(config_.log_path_);
+    }
+
+    if (prev_full_log_file_path != config_.full_log_file_path_) {
+      scroll_files(config_.scroll_file_every_run_);
+    }
+  }
+
+
   /**
   * \brief    write method. Called every write to file operation
   */
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
+    
+    if (!stream_.is_open())
+      stream_.open(config_.full_log_file_path_.c_str(), std::ios::app);
 
+    if (!stream_.is_open())
+      return;
+
+    if (is_need_scroll_files()) {
+      scroll_files();
+    }
+
+    std::string str = hdr;
+    if (hdr.size()) str.append(" ");
+    str += what + std::string("\n");
+
+    cur_file_size_ += static_cast<int>(str.size());
+
+
+#if LOG_ANDROID_SYSLOG
+    __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
+#else  // LOG_ANDROID_SYSLOG
+#if LOG_FLUSH_FILE_EVERY_WRITE
+#if !LOG_TEST_DO_NOT_WRITE_FILE
+    {
+      std::ofstream stream(configurator.get_full_log_file_path().c_str(),
+        std::ios::app);
+      stream << str;
+    }
+#endif  // LOG_TEST_DO_NOT_WRITE_FILE
+#else   // LOG_FLUSH_FILE_EVERY_WRITE
+    stream_ << str;
+#endif  // LOG_FLUSH_FILE_EVERY_WRITE
+#endif  // LOG_ANDROID_SYSLOG
+
+    if (log_flush_every_write_) {
+      stream_.flush();
+      stream_.close();
+    }
   }
 
-};
+  void flush() {
+    if (!log_flush_every_write_ && stream_.is_open())
+      stream_.flush();
+  }
 
+  void close() {
+    if (stream_.is_open())
+      stream_.close();
+  }
 
-
-
-/**
- * \class   Logger main class
- */
-class logger : public logger_interface {
- private:
-   std::vector<logger_output_interface*> outputs_;
-   int cur_file_size_;
-
+protected:
   /** Get current log file index. Used for log files scrolling */
   static int get_log_file_index(const std::string& name) {
     size_t last_point_pos = name.find_last_of('.');
@@ -4417,7 +4717,7 @@ class logger : public logger_interface {
 
     std::string idx = name.substr(last_point_pos);
 
-    if (idx.size()) 
+    if (idx.size())
       idx = idx.substr(1);
 
     for (size_t i = 0; i < idx.size(); i++)
@@ -4425,10 +4725,6 @@ class logger : public logger_interface {
         return -1;
 
     return atoi(idx.c_str());
-  }
-
-  void find_files() {
-
   }
 
   bool is_need_scroll_files() const {
@@ -4442,9 +4738,8 @@ class logger : public logger_interface {
     if (!force && !configurator.get_log_scroll_file_size()) return;
 
     bool need_scroll = force;
-
     if (!need_scroll)
-      need_scroll = cur_file_size_ > static_cast<int>(configurator.get_log_scroll_file_size());
+      need_scroll = is_need_scroll_files();
 
     if (need_scroll) {
       std::map<int, std::string> log_files;
@@ -4478,13 +4773,13 @@ class logger : public logger_interface {
 
       std::string find_pattern = configurator.get_log_file_name() + ".*";
 
-      DIR* dir_obj = opendir(configurator.get_log_path().c_str());
+      DIR* dir_obj = opendir(config_.log_path_.c_str());
       if (dir_obj) {
         struct dirent* file_obj = NULL;
 
         while (NULL != (file_obj = readdir(dir_obj))) {
           int ret =
-              fnmatch(find_pattern.c_str(), file_obj->d_name, FNM_PATHNAME | FNM_PERIOD);
+            fnmatch(find_pattern.c_str(), file_obj->d_name, FNM_PATHNAME | FNM_PERIOD);
           if (ret == 0) {
             int index = get_log_file_index(file_obj->d_name);
 
@@ -4499,10 +4794,10 @@ class logger : public logger_interface {
       }
 #endif  // LOG_PLATFORM_WINDOWS
 
-#if !LOG_FLUSH_FILE_EVERY_WRITE
-      stream_.flush();
-      stream_.close();
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
+      if (stream_.is_open()) {
+        stream_.flush();
+        stream_.close();
+      }
 
       for (unsigned int i = max_index; i > 0; i--) {
         if (log_files.find(i) == log_files.end())
@@ -4511,337 +4806,72 @@ class logger : public logger_interface {
         unsigned int new_index = i + 1;
         const std::string& name = log_files[i];
 
-        if (configurator.get_log_scroll_file_count() &&
-            configurator.get_log_scroll_file_count() < new_index) {
-          std::string file_path_for_delete = configurator.get_log_path() + utils::get_path_separator() + name;
+        if (config_.scroll_file_count_ &&
+          config_.scroll_file_count_ < new_index) {
+          std::string file_path_for_delete = config_.log_path_ + utils::get_path_separator() + name;
 
-#ifdef LOG_PLATFORM_WINDOWS
-          DeleteFileA(file_path_for_delete.c_str());
-#else  // LOG_PLATFORM_WINDOWS
-
-#ifdef LOG_HAVE_UNISTD_H
-          unlink(file_path_for_delete.c_str());
-#else   // LOG_HAVE_UNISTD_H
-          std::remove(file_path_for_delete.c_str());
-#endif  // LOG_HAVE_UNISTD_H
-
-#endif  // LOG_PLATFORM_WINDOWS
-
+          utils::delete_file(file_path_for_delete);
           continue;
         }
 
         std::string new_name =
-            name.substr(0, name.find_last_of('.')) + str::stringformat(".%d", new_index);
+          name.substr(0, name.find_last_of('.')) + str::stringformat(".%d", new_index);
 
-#ifdef LOG_PLATFORM_WINDOWS
-        MoveFileA((configurator.get_log_path() + utils::get_path_separator() + name).c_str(),
-                  (configurator.get_log_path() + utils::get_path_separator() + new_name).c_str());
-#else   // LOG_PLATFORM_WINDOWS
-        rename((configurator.get_log_path() + utils::get_path_separator() + name).c_str(),
-               (configurator.get_log_path() + utils::get_path_separator() + new_name).c_str());
-#endif  // LOG_PLATFORM_WINDOWS
+        utils::move_file((config_.log_path_ + utils::get_path_separator() + name),
+          (config_.log_path_ + utils::get_path_separator() + new_name));
       }
 
-#ifdef LOG_PLATFORM_WINDOWS
-      MoveFileExA(configurator.get_full_log_file_path().c_str(),
-                  (configurator.get_full_log_file_path() + ".1").c_str(),
-                  MOVEFILE_WRITE_THROUGH | MOVEFILE_REPLACE_EXISTING);
-#else   // LOG_PLATFORM_WINDOWS
-      rename(configurator.get_full_log_file_path().c_str(),
-             (configurator.get_full_log_file_path() + ".1").c_str());
-#endif  // LOG_PLATFORM_WINDOWS
+      utils::move_file(config_.full_log_file_path_, config_.full_log_file_path_ + ".1");
 
-#if !LOG_FLUSH_FILE_EVERY_WRITE
-      if (!stream_.is_open())
-        stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
+      if (!log_flush_every_write_) {
+        if (!stream_.is_open())
+          stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
+      }
     }
   }
 
+  struct file_output_config {
+    std::string log_path_;
+    std::string log_file_name_;
+    std::string full_log_file_path_;
+    bool flush_every_write_;
+    size_t scroll_file_size_;
+    size_t scroll_file_count_;
+    bool scroll_file_every_run_;
+    bool create_log_directory_;
+
+    file_output_config() : 
+      flush_every_write_(false), scroll_file_size_(0), 
+      scroll_file_count_(0), scroll_file_every_run_(false), create_log_directory_(true) {}
+  };
+
+  file_output_config config_;
+
+private:
+  std::ofstream stream_;
+  int cur_file_size_;
+  bool log_flush_every_write_;
+  std::string name_;
+  bool first_write_;
+};
+
+
+
+
+/**
+ * \class   Logger main class
+ */
+class logger : public logger_interface {
+ private:
+  std::map<int, std::vector<logger_plugin_interface*> > plugins_;
   int ref_counter_;
+  bool first_write_;
+  cfg::KeyValueTypeList config_;
 
 #if LOG_SHARED
   bool shared_master_;
   void* shared_obj_ptr_;
 #endif  // LOG_SHARED
-
-#if LOG_MULTITHREADED
-
-#ifdef LOG_PLATFORM_WINDOWS
-#define LOG_MT_MUTEX CRITICAL_SECTION
-#define LOG_MT_MUTEX_INIT(x, y) InitializeCriticalSection(x)
-#define LOG_MT_MUTEX_LOCK(x) EnterCriticalSection(x)
-#define LOG_MT_MUTEX_UNLOCK(x) LeaveCriticalSection(x)
-#define LOG_MT_MUTEX_DESTROY(x) DeleteCriticalSection(x)
-#define LOG_MT_THREAD_EXIT(x) ExitThread(x)
-#else  // LOG_PLATFORM_WINDOWS
-
-#define LOG_MT_MUTEX pthread_mutex_t
-#define LOG_MT_MUTEX_INIT pthread_mutex_init
-#define LOG_MT_MUTEX_LOCK pthread_mutex_lock
-#define LOG_MT_MUTEX_UNLOCK pthread_mutex_unlock
-#define LOG_MT_MUTEX_DESTROY pthread_mutex_destroy
-#define LOG_MT_THREAD_EXIT pthread_exit
-
-#endif  // LOG_PLATFORM_WINDOWS
-
-#endif  // LOG_MULTITHREADED
-
-#if LOG_MULTITHREADED
-  struct log_record {
-    int verb_level_;
-    std::string hdr_;
-    std::string text_;
-    log_record() : verb_level_(logger_verbose_mute) {}
-  };
-
-  LOG_MT_MUTEX mt_buffer_lock_;
-  std::list<log_record> mt_buffer_;
-
-#ifdef LOG_PLATFORM_WINDOWS
-  HANDLE log_thread_handle_;
-  HANDLE write_event_;
-#else   // LOG_PLATFORM_WINDOWS
-  pthread_t log_thread_handle_;
-  pthread_cond_t write_event_;
-#endif  // LOG_PLATFORM_WINDOWS
-
-  int mt_terminating_;
-
-  static unsigned long
-#ifdef LOG_PLATFORM_WINDOWS
-      __stdcall
-#endif  // LOG_PLATFORM_WINDOWS
-      log_thread_fn(void* data) {
-    utils::set_current_thread_name("logger_thread");
-    logger* log = reinterpret_cast<logger*>(data);
-    
-#if !LOG_FLUSH_FILE_EVERY_WRITE
-    if (!log->stream_.is_open())
-      log->stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-
-    while (true) {
-      std::list<log_record> current_records;
-      std::vector<logger_output_interface*> current_outputs;
-
-
-#ifdef LOG_PLATFORM_WINDOWS
-      LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
-      if (log->mt_buffer_.size() == 0) {
-        LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
-        
-        log->wait_write_event();
-//        WaitForSingleObject(log->write_event_, 100);
-        
-        LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
-      }
-#endif  // LOG_PLATFORM_WINDOWS
-
-#ifndef LOG_PLATFORM_WINDOWS
-      LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
-
-      if (log->mt_buffer_.size() == 0) {
-  //      pthread_cond_wait(&log->write_event_, &log->mt_buffer_lock_);
-        log->wait_write_event();
-      }
-#endif  // LOG_PLATFORM_WINDOWS
-
-      std::copy(log->mt_buffer_.begin(), log->mt_buffer_.end(), std::back_inserter(current_records));
-      log->mt_buffer_.clear();
-      current_outputs = log->outputs_;
-      LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
-
-      // notify mt_buffer_ is empty
-      log->fire_write_event();
-
-      while (current_records.size()) {
-        if (log->is_need_scroll_files()) {
-          LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
-          log->scroll_files();
-          LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
-        }
-
-        const log_record& record = *current_records.begin();
-
-        std::string str = record.hdr_;
-        if (record.hdr_.size()) str.append(" ");
-        str += record.text_ + std::string("\n");
-
-        log->cur_file_size_ += static_cast<int>(str.size());
-
-        // call registered outputs
-        for (std::vector<logger_output_interface*>::const_iterator it = current_outputs.cbegin();
-          it != current_outputs.cend(); it++) {
-          if (*it)
-            (*it)->write(record.verb_level_, record.hdr_, record.text_);
-        }
-
-#if LOG_ANDROID_SYSLOG
-        __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
-#else  // LOG_ANDROID_SYSLOG
-#if LOG_FLUSH_FILE_EVERY_WRITE
-#if !LOG_TEST_DO_NOT_WRITE_FILE
-        {
-          std::ofstream stream(configurator.get_full_log_file_path().c_str(),
-                               std::ios::app);
-          stream << str;
-        }
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
-#else   // LOG_FLUSH_FILE_EVERY_WRITE
-        log->stream_ << str;
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-#endif  // LOG_ANDROID_SYSLOG
-
-        current_records.pop_front();
-      }
-
-      if (log->mt_terminating_) {
-#if !LOG_FLUSH_FILE_EVERY_WRITE
-        log->stream_.flush();
-        log->stream_.close();
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-
-        break;
-      }
-    }
-
-#if LOG_MULTITHREADED
-	LOG_MT_THREAD_EXIT(0);
-#endif //LOG_MULTITHREADED
-    return 0;
-  }
-
-  void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
-    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
-
-    if (LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES &&
-        mt_buffer_.size() > LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES) {
-
-#if LOG_MULTITHREADED_STOP_CALLER_ON_OVERFLOW
-      // Wait until log process messages
-      while (mt_buffer_.size() > LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES) {
-#ifdef LOG_PLATFORM_WINDOWS
-        LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
-        wait_write_event();
-        LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
-#endif  // LOG_PLATFORM_WINDOWS
-
-#ifndef LOG_PLATFORM_WINDOWS
-        wait_write_event();
-#endif  // LOG_PLATFORM_WINDOWS
-      }
-
-#else /*LOG_MULTITHREADED_STOP_CALLER_ON_OVERFLOW*/
-      // Remove messages from buffer
-      size_t remove_msgs = (mt_buffer_.size() / 10) + 1;
-      if (remove_msgs > mt_buffer_.size())
-        remove_msgs = mt_buffer_.size();
-
-      for (size_t i = 0; i < remove_msgs; i++)
-        mt_buffer_.pop_front();
-
-      log_record overflow_msg;
-      overflow_msg.verb_level_ = logger_verbose_fatal;
-      overflow_msg.text_ = str::stringformat("*** Logging overflow. Removed %d log messages", static_cast<int>(remove_msgs));
-      mt_buffer_.push_back(overflow_msg);
-
-#endif /*LOG_MULTITHREADED_STOP_CALLER_ON_OVERFLOW*/
-
-
-
-    }
-
-    log_record record;
-    record.hdr_ = hdr;
-    record.text_ = what;
-    record.verb_level_ = verb_level;
-
-    mt_buffer_.push_back(record);
-
-    fire_write_event();
-
-	  LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
-  }
-
-  __inline void fire_write_event() {
-#ifdef LOG_PLATFORM_WINDOWS
-    SetEvent(write_event_);
-#else   // LOG_PLATFORM_WINDOWS
-    pthread_cond_signal(&write_event_);
-#endif  // LOG_PLATFORM_WINDOWS
-  }
-
-  __inline void wait_write_event() {
-#ifdef LOG_PLATFORM_WINDOWS
-      WaitForSingleObject(write_event_, 100);
-#endif  // LOG_PLATFORM_WINDOWS
-
-#ifndef LOG_PLATFORM_WINDOWS
-      pthread_cond_wait(&write_event_, &mt_buffer_lock_);
-#endif  // LOG_PLATFORM_WINDOWS
-  }
-
-
-#else  // LOG_MULTITHREADED
-  __inline void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
-    scroll_files();
-    std::string text = hdr + std::string(" ") + what + std::string("\n");
-
-    // call registered outputs
-    for (std::vector<logger_output_interface*>::const_iterator it = outputs_.cbegin();
-      it != outputs_.cend(); it++) {
-      if (*it)
-        (*it)->write(verb_level, hdr, what);
-    }
-
-#if LOG_ANDROID_SYSLOG
-    __android_log_write(ANDROID_LOG_INFO, "LOGGER", text.c_str());
-#else  // LOG_ANDROID_SYSLOG
-
-#if LOG_FLUSH_FILE_EVERY_WRITE
-#if !LOG_TEST_DO_NOT_WRITE_FILE
-    std::ofstream stream(configurator.get_full_log_file_path().c_str(), std::ios::app);
-    stream << what;
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
-#else   // LOG_FLUSH_FILE_EVERY_WRITE
-    if (!stream_.is_open())
-      stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
-
-    stream_ << text;
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-#endif  // LOG_ANDROID_SYSLOG
-
-    cur_file_size_ += static_cast<int>(what.size());
-  }
-#endif  // LOG_MULTITHREADED
-
-#if !LOG_FLUSH_FILE_EVERY_WRITE
-  std::ofstream stream_;
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-
- public:
-  void ref() { ref_counter_++; }
-  void deref() { ref_counter_--; }
-  int ref_counter() { return ref_counter_; }
-
-  /** Add logger output interface */
-  void add_output(logger_output_interface* output_interface) {
-    outputs_.push_back(output_interface);
-  }
-
-  /** Remove logger output interface */
-  void remove_output(logger_output_interface* output_interface) {
-    std::vector<logger_output_interface*>::iterator it = std::find(outputs_.begin(), outputs_.end(), output_interface);
-    if (it != outputs_.end())
-      outputs_.erase(it);
-  }
-
-
-  log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) {
-    return log_stream(this, verb_level, addr, function_name, source_file, line_number);
-  }
-
 
 #if LOG_USE_OBJMON
   struct obj_info_t {
@@ -4866,7 +4896,314 @@ class logger : public logger_interface {
     LOG_MT_MUTEX_UNLOCK(&mutex_objmon_);
 #endif  // LOG_MULTITHREADED
   }
+#endif /*LOG_USE_OBJMON*/
 
+
+#if LOG_MULTITHREADED
+  /** Log record message structure */
+  struct log_record {
+    int verb_level_;
+    std::string hdr_;
+    std::string text_;
+    log_record() : verb_level_(logger_verbose_mute) {}
+  };
+
+  /** buffer lock object */
+  LOG_MT_MUTEX mt_buffer_lock_;
+
+  /** Multithreaded buffer */
+  std::list<log_record> mt_buffer_;
+
+  LOG_MT_EVENT_TYPE write_event_;
+  LOG_MT_EVENT_TYPE buffer_devastated_;
+  LOG_MT_THREAD_HANDLE_TYPE  log_thread_handle_;
+
+  /** Logger terminating flag */
+  bool mt_terminating_;
+
+
+private:
+
+  /** 
+   * \brief    Logger thread function
+   * \param    data    Pointer to logger* object
+   * \return   thread exit code
+   */
+  static unsigned long
+#ifdef LOG_PLATFORM_WINDOWS
+      __stdcall
+#endif  // LOG_PLATFORM_WINDOWS
+      log_thread_fn(void* data) {
+    utils::set_current_thread_name("logger_thread");
+    logger* log = reinterpret_cast<logger*>(data);
+    
+    while (true) {
+      std::list<log_record> log_records;
+      std::vector<logger_plugin_interface*> outputs;
+      bool mt_terminating;
+
+      // mutex locked section
+      {
+        LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
+
+        if (log->mt_buffer_.size() == 0) {
+          log->wait_event(&log->write_event_, &log->mt_buffer_lock_, true, 250);
+        }
+
+        // copy all records from log to local and clear log buffer
+        std::copy(log->mt_buffer_.begin(), log->mt_buffer_.end(), std::back_inserter(log_records));
+        log->mt_buffer_.clear();
+        outputs = log->plugins_[kLogPluginTypeOutput];
+
+        mt_terminating = log->mt_terminating_;
+        LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
+      }
+
+      // notify that log buffer has been devastated
+      log->fire_event(&log->buffer_devastated_);
+
+      while (log_records.size()) {
+        const log_record& record = *log_records.begin();
+
+        // call registered outputs
+        for (std::vector<logger_plugin_interface*>::const_iterator it = outputs.cbegin();
+          it != outputs.cend(); it++) {
+          logger_output_interface* output_plugin = dynamic_cast<logger_output_interface*>(*it);
+          if (output_plugin)
+            output_plugin->write(record.verb_level_, record.hdr_, record.text_);
+        }
+        log_records.pop_front();
+      }
+
+      if (mt_terminating) {
+        for (std::vector<logger_plugin_interface*>::const_iterator it = outputs.cbegin();
+          it != outputs.cend(); it++) {
+          logger_output_interface* output_plugin = dynamic_cast<logger_output_interface*>(*it);
+          if (output_plugin) {
+            output_plugin->flush();
+            output_plugin->close();
+          }
+        }
+
+        break;
+      }
+    }
+
+    LOG_MT_THREAD_EXIT(0);
+    return 0;
+  }
+
+  /**
+   * \brief    Handle situation when multithreaded buffer has overflow. mt_buffer_lock_ mutex must be locked before call
+   */
+  void handle_buffer_overflow(bool stop_caller) {
+    if (stop_caller) {
+      // Wait until log process messages
+      while (mt_buffer_.size() > LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES) {
+        wait_event(&buffer_devastated_, &mt_buffer_lock_, true, 30);
+      }
+    } else {  
+      // Remove messages from buffer
+      size_t remove_msgs = (mt_buffer_.size() / 10) + 1;
+      if (remove_msgs > mt_buffer_.size())
+        remove_msgs = mt_buffer_.size();
+
+      for (size_t i = 0; i < remove_msgs; i++)
+        mt_buffer_.pop_front();
+
+      // notify in log about overflow
+      log_record overflow_msg;
+      overflow_msg.verb_level_ = logger_verbose_fatal;
+      overflow_msg.text_ = str::stringformat("*** Log overflow. Removed %d log messages", static_cast<int>(remove_msgs));
+      mt_buffer_.push_back(overflow_msg);
+    }
+  }
+
+
+
+  /** Multithreaded put_to_stream */
+  void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
+    handle_first_write();
+
+    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
+
+    if (LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES &&
+        mt_buffer_.size() > LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES) {
+      handle_buffer_overflow(LOG_MULTITHREADED_STOP_CALLER_ON_OVERFLOW);
+    }
+
+    log_record record;
+    record.hdr_ = hdr;
+    record.text_ = what;
+    record.verb_level_ = verb_level;
+
+    mt_buffer_.push_back(record);
+    fire_event(&write_event_);
+	  LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
+  }
+
+  static void fire_event(LOG_MT_EVENT_TYPE* evt) {
+#ifdef LOG_PLATFORM_WINDOWS
+    SetEvent(*evt);
+#else   // LOG_PLATFORM_WINDOWS
+    pthread_cond_signal(evt);
+#endif  // LOG_PLATFORM_WINDOWS
+  }
+
+  static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mutex_locked, int wait_ms) {
+#ifdef LOG_PLATFORM_WINDOWS
+    if (is_mutex_locked) {
+      LOG_MT_MUTEX_UNLOCK(mutex);
+    }
+
+    bool result = WaitForSingleObject(*evt, wait_ms) == WAIT_OBJECT_0;
+
+    if (is_mutex_locked) {
+      LOG_MT_MUTEX_LOCK(mutex);
+    }
+
+    return result;
+#endif  // LOG_PLATFORM_WINDOWS
+
+#ifndef LOG_PLATFORM_WINDOWS
+    struct timeval tv;
+    struct timespec ts;
+
+    gettimeofday(&tv, NULL);
+    ts.tv_sec = time(NULL) + wait_ms / 1000;
+    ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (wait_ms % 1000);
+    ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
+    ts.tv_nsec %= (1000 * 1000 * 1000);
+
+    if (!is_mutex_locked) {
+      LOG_MT_MUTEX_LOCK(mutex);
+    }
+
+    int ret = pthread_cond_timedwait(evt, &mt_buffer_lock_, &ts);
+    if (!is_mutex_locked) {
+      LOG_MT_MUTEX_UNLOCK(mutex);
+    }
+
+    return ret == 0;
+#endif  // LOG_PLATFORM_WINDOWS
+  }
+
+
+#else  // LOG_MULTITHREADED
+  /** Single threaded put_to_stream */
+  __inline void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
+    handle_first_write();
+    std::string text = hdr + std::string(" ") + what + std::string("\n");
+
+    // call registered outputs
+    for (std::vector<logger_plugin_interface*>::const_iterator it = plugins_[kLogPluginTypeOutput].cbegin();
+      it != plugins_[kLogPluginTypeOutput].cend(); it++) {
+      logger_output_interface* output_plugin = dynamic_cast<logger_output_interface*>(*it);
+      if (output_plugin)
+        output_plugin->write(verb_level, hdr, what);
+    }
+    /*
+#if LOG_ANDROID_SYSLOG
+    __android_log_write(ANDROID_LOG_INFO, "LOGGER", text.c_str());
+#else  // LOG_ANDROID_SYSLOG
+
+#if LOG_FLUSH_FILE_EVERY_WRITE
+#if !LOG_TEST_DO_NOT_WRITE_FILE
+    std::ofstream stream(configurator.get_full_log_file_path().c_str(), std::ios::app);
+    stream << what;
+#endif  // LOG_TEST_DO_NOT_WRITE_FILE
+#else   // LOG_FLUSH_FILE_EVERY_WRITE
+    if (!stream_.is_open())
+      stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
+
+    stream_ << text;
+#endif  // LOG_FLUSH_FILE_EVERY_WRITE
+#endif  // LOG_ANDROID_SYSLOG
+
+    cur_file_size_ += static_cast<int>(what.size());
+    */
+  }
+#endif  // LOG_MULTITHREADED
+
+  /** Process first write in session */
+  void handle_first_write() {
+    if (first_write_) {
+      first_write_ = false;
+      put_to_stream(logger_verbose_all, "", "\n");
+#if LOG_USE_SYSTEMINFO
+      if (configurator.get_need_sys_info()) put_to_stream(logger_verbose_all, std::string(), query_system_info());
+#endif  // LOG_USE_SYSTEMINFO
+    }
+  }
+
+
+ public:
+  void ref() { ref_counter_++; }
+  void deref() { ref_counter_--; }
+  int ref_counter() { return ref_counter_; }
+
+  void flush() {
+#if LOG_MULTITHREADED
+    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
+
+    // flush multithreaded buffer
+    while(mt_buffer_.size()) {
+      if (wait_event(&buffer_devastated_, &mt_buffer_lock_, true, 100))
+        break;
+    }
+#endif  // LOG_MULTITHREADED
+
+    // flush registered outputs
+    for (std::vector<logger_plugin_interface*>::const_iterator it = plugins_[kLogPluginTypeOutput].cbegin();
+      it != plugins_[kLogPluginTypeOutput].cend(); it++) {
+      logger_output_interface* output_plugin = dynamic_cast<logger_output_interface*>(*it);
+      if (output_plugin)
+        output_plugin->flush();
+    }
+
+#if LOG_MULTITHREADED
+    LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
+#endif  // LOG_MULTITHREADED
+  }
+
+  /** Add logger output interface */
+  void add_plugin(logger_plugin_interface* plugin_interface) {
+    if (!plugin_interface)
+      return;
+
+    int plugin_type = plugin_interface->plugin_type();
+    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
+      return;
+    
+    plugins_[plugin_type].push_back(plugin_interface);
+
+    plugin_interface->attach(this);
+    plugin_interface->config_updated(config_);
+  }
+
+  /** Remove logger output interface */
+  void remove_plugin(logger_plugin_interface* plugin_interface) {
+    if (!plugin_interface)
+      return;
+
+    int plugin_type = plugin_interface->plugin_type();
+    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
+      return;
+    
+    std::vector<logger_plugin_interface*>::iterator it = std::find(plugins_[plugin_type].begin(), plugins_[plugin_type].end(), plugin_interface);
+    if (it != plugins_[plugin_type].end()) {
+      (*it)->detach(this);
+      plugins_[plugin_type].erase(it);
+    }
+  }
+
+  log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) {
+    return log_stream(this, verb_level, addr, function_name, source_file, line_number);
+  }
+
+
+
+#if LOG_USE_OBJMON
   void log_objmon_register(size_t hash_code, const char* type_name, void* ptr) {
     obj_info_t obj_info;
     obj_info.ptr_ = ptr;
@@ -4938,17 +5275,15 @@ class logger : public logger_interface {
    * \brief    Logger object constructor
    */
   logger()
-      : ref_counter_(0),
-        cur_file_size_(0)
+      : ref_counter_(0)
+      , first_write_(true)
 #if LOG_SHARED
-        ,
-        shared_master_(false),
-        shared_obj_ptr_(NULL)
+      , shared_master_(false)
+      , shared_obj_ptr_(NULL)
 #endif  // LOG_SHARED
 
 #if LOG_MULTITHREADED
-        ,
-        mt_terminating_(0)
+      , mt_terminating_(false)
 #endif  // LOG_MULTITHREADED
   {
 #if LOG_SHARED
@@ -4959,27 +5294,8 @@ class logger : public logger_interface {
     }
 #endif  // LOG_SHARED
 
-#if LOG_INI_CONFIGURATION
-    log_ini_configurator::configure(configurator.get_ini_file_find_paths().c_str());
-#endif  // LOG_INI_CONFIGURATION
-
-#if LOG_CONFIGURE_FROM_REGISTRY
-    log_registry_configurator::configure(configurator.get_reg_config_path());
-#endif  // LOG_CONFIGURE_FROM_REGISTRY
-
-#if LOG_CREATE_DIRECTORY
-
-#ifdef LOG_PLATFORM_WINDOWS
-    SHCreateDirectoryExA(NULL, configurator.get_log_path().c_str(), NULL);
-#else   // LOG_PLATFORM_WINDOWS
-    utils::mkpath(configurator.get_log_path().c_str(), 0777);
-#endif  // LOG_PLATFORM_WINDOWS
-
-#endif  // LOG_CREATE_DIRECTORY
-
-    if (configurator.get_verbose_level() == logger_verbose_mute) return;
-
-    scroll_files(configurator.get_log_scroll_file_every_run());
+    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++)
+      plugins_.insert(std::pair<int, std::vector<logger_plugin_interface*> >(i, std::vector<logger_plugin_interface*>()));
 
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_INIT(&mt_buffer_lock_, NULL);
@@ -4988,24 +5304,23 @@ class logger : public logger_interface {
     LOG_MT_MUTEX_INIT(&mutex_objmon_, NULL);
 #endif  // LOG_USE_OBJMON
 
+    reload_config();
+
 #ifdef LOG_PLATFORM_WINDOWS
     write_event_ = CreateEvent(NULL, FALSE, TRUE, NULL);
+    buffer_devastated_ = CreateEvent(NULL, FALSE, TRUE, NULL);
 
     DWORD thread_id;
     log_thread_handle_ = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&log_thread_fn,
                                      this, 0, &thread_id);    
 #else   // LOG_PLATFORM_WINDOWS
     pthread_cond_init(&write_event_, NULL);
+    pthread_cond_init(&buffer_devastated_, NULL);
     pthread_create(&log_thread_handle_, NULL, (void* (*)(void*)) & log_thread_fn, this);
 #endif  // LOG_PLATFORM_WINDOWS
 
 #endif  // LOG_MULTITHREADED
 
-    put_to_stream(logger_verbose_all, "", "\n");
-    
-#if LOG_USE_SYSTEMINFO
-    if (configurator.get_need_sys_info()) put_to_stream(logger_verbose_all, std::string(), query_system_info());
-#endif  // LOG_USE_SYSTEMINFO
   }
 
   /**
@@ -5023,34 +5338,77 @@ class logger : public logger_interface {
 #endif  // LOG_SHARED
 
 #if LOG_MULTITHREADED
-    mt_terminating_ = 1;
+    // Send termination signal
+    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
+    mt_terminating_ = true;
+    LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
+
+    fire_event(&write_event_);
 
 #ifdef LOG_PLATFORM_WINDOWS
-    SetEvent(write_event_);
     WaitForSingleObject(log_thread_handle_, 10000);
     CloseHandle(write_event_);
+    CloseHandle(buffer_devastated_);
 #else   // LOG_PLATFORM_WINDOWS
-    pthread_cond_signal(&write_event_);
     pthread_join(log_thread_handle_, NULL);
     pthread_cond_destroy(&write_event_);
+    pthread_cond_destroy(&buffer_devastated_);
 #endif  // LOG_PLATFORM_WINDOWS
+#endif /*LOG_MULTITHREADED*/
+
+    // Notify outputs about flush and close
+    for (std::vector<logger_plugin_interface*>::const_iterator it = plugins_[kLogPluginTypeOutput].cbegin();
+      it != plugins_[kLogPluginTypeOutput].cend(); it++) {
+      logger_output_interface* output_plugin = dynamic_cast<logger_output_interface*>(*it);
+      if (output_plugin) {
+        output_plugin->flush();
+        output_plugin->close();
+      }
+    }
+
+    // detach all plugins
+    for (std::map<int, std::vector<logger_plugin_interface*> >::iterator it = plugins_.begin();
+      it != plugins_.end(); it++) {
+      for (std::vector<logger_plugin_interface*>::iterator plugin_it = it->second.begin(); plugin_it != it->second.end(); plugin_it++) {
+        if (*plugin_it)
+          (*plugin_it)->detach(this);
+      }
+    }
 
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_DESTROY(&mt_buffer_lock_);
-#endif //LOG_MULTITHREADED
 
-#if LOG_USE_OBJMON
+#  if LOG_USE_OBJMON
     LOG_MT_MUTEX_DESTROY(&mutex_objmon_);
-#endif  // LOG_USE_OBJMON
-
+#  endif  // LOG_USE_OBJMON
 #endif  // LOG_MULTITHREADED
-
-#if !LOG_FLUSH_FILE_EVERY_WRITE && !LOG_MULTITHREADED
-    stream_.flush();
-    stream_.close();
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
   }
 
+  void reload_config() {
+#if LOG_INI_CONFIGURATION
+    log_ini_configurator::configure(configurator.get_ini_file_find_paths().c_str());
+#endif  // LOG_INI_CONFIGURATION
+
+#if LOG_CONFIGURE_FROM_REGISTRY
+    log_registry_configurator::configure(configurator.get_reg_config_path());
+#endif  // LOG_CONFIGURE_FROM_REGISTRY
+
+    for (std::vector<logger_plugin_interface*>::const_iterator it = plugins_[kLogPluginTypeConfig].cbegin();
+      it != plugins_[kLogPluginTypeConfig].cend(); it++) {
+      logger_config_plugin_interface* config_plugin = dynamic_cast<logger_config_plugin_interface*>(*it);
+      if (config_plugin)
+        config_plugin->reload(config_);
+    }
+
+    // Notify all plugins that config has been reloaded
+    for (std::map<int, std::vector<logger_plugin_interface*> >::iterator it = plugins_.begin();
+      it != plugins_.end(); it++) {
+      for (std::vector<logger_plugin_interface*>::iterator plugin_it = it->second.begin(); plugin_it != it->second.end(); plugin_it++) {
+        if (*plugin_it)
+          (*plugin_it)->config_updated(config_);
+      }
+    }
+  }
 
   /**
    * \brief   Log binary information method
@@ -5794,6 +6152,9 @@ class unhandled_exceptions_processor {
     create_minidump(ex_ptrs, dump_name);
 
     if (prev_exception_filter_) return prev_exception_filter_(ex_ptrs);
+    
+    if (_logger.get())
+      _logger->flush();
 
 #if LOG_RELEASE_ON_APP_CRASH
     _logger.release();
@@ -5841,6 +6202,9 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   LOG_FATAL("*** STACKTRACE ***");
   LOG_FATAL(result.c_str());
   LOG_FATAL("*** END STACKTRACE ***");
+
+  if (_logger.get())
+    _logger->flush();
 
 #if LOG_RELEASE_ON_APP_CRASH
   _logger.release();

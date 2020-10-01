@@ -170,7 +170,6 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-  logging::_logger->add_output(new LogToConsole());
 
 	// enable all logger messgaes
 	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
@@ -179,6 +178,9 @@ int main(int argc, char* argv[]) {
   logging::configurator.set_log_scroll_file_count(6);
   logging::configurator.set_log_scroll_file_size(2 * 1024 * 1024);
   logging::configurator.set_log_scroll_file_every_run(true);
+
+  logging::_logger->add_plugin(new LogToConsole());
+  logging::_logger->add_plugin(new logging::detail::logger_file_output());
 
   const char* msg = "HELLO";
   LOG_DEBUG("%.8X", msg);
