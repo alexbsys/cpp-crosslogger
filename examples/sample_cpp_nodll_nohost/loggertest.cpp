@@ -1,6 +1,10 @@
 // Extremely simplest example
 // No dependencies at all, no additional CPP files, only logger.h
 
+#include <log/logger_win_config_macro_plugin.h>
+#include <log/logger_ini_config_plugin.h>
+#include <log/logger_scroll_file_output_plugin.h>
+
 #include <log/logger.h>
 #include <fstream>
 #include <stdlib.h>
@@ -161,9 +165,10 @@ void multithread_test() {
   }
 }
 
-class LogToConsole : public virtual logging::logger_output_interface {
+class LogToConsole : public virtual logging::logger_output_plugin_interface {
 public:
   virtual ~LogToConsole() {}
+  const char* type() const { return "console_output"; }
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
     printf("%s %s\n", hdr.c_str(), what.c_str());
   }
@@ -174,13 +179,26 @@ int main(int argc, char* argv[]) {
 	// enable all logger messgaes
 	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
 
-	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
-  logging::configurator.set_log_scroll_file_count(6);
-  logging::configurator.set_log_scroll_file_size(2 * 1024 * 1024);
-  logging::configurator.set_log_scroll_file_every_run(true);
+  logging::_logger->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
 
-  logging::_logger->add_plugin(new LogToConsole());
-  logging::_logger->add_plugin(new logging::detail::logger_file_output());
+//	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
+//  logging::configurator.set_log_scroll_file_count(6);
+//  logging::configurator.set_log_scroll_file_size(2 * 1024 * 1024);
+//  logging::configurator.set_log_scroll_file_every_run(true);
+
+
+  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
+  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
+  logging::_logger->attach_plugin(new LogToConsole());
+//  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
+
+  logging::_logger->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
+
+
+  logging::_logger->reload_config();
+
+  logging::_logger->dump_state(logging::logger_verbose_info);
+  logging::_logger->flush();
 
   const char* msg = "HELLO";
   LOG_DEBUG("%.8X", msg);

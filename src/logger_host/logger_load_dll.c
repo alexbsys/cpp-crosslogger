@@ -13,6 +13,7 @@
 #include <log/logger.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #	ifdef ANSI 
 #		include <stdarg.h>

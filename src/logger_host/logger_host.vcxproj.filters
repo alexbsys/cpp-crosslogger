@@ -29,5 +29,71 @@
     <ClInclude Include="..\..\include\log\logger.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_utils.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_config.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_pdetect.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_xprintf.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_pdefs.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_varargs.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_shmem.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_moddef.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_get_caller_addr.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_sysinclib.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_ini_parser.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_cfgcheck.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_strutils.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_cfgfn.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_interfaces.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_sysinfo.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_win_registry.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_runtime_debugging.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_win_config_macro_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_ini_config_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_scroll_file_output_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_binary_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
