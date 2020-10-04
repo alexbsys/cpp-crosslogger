@@ -95,5 +95,11 @@
     <ClInclude Include="..\..\include\log\logger_binary_command_plugin.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_modules_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_stacktrace_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

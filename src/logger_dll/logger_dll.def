@@ -2,9 +2,13 @@ LIBRARY
 EXPORTS
 	__c_logger_log
 	__c_logger_log_args
-	__c_logger_log_binary
-	__c_logger_log_modules
-	__c_logger_log_stack_trace
+	__c_logger_log_cmd
+	__c_logger_log_cmd_args
+;	__c_logger_log_binary
+;	__c_logger_log_modules
+;	__c_logger_log_stack_trace
+__c_logger_set_config_param
+__c_logger_get_config_param
         __c_logger_objmon_register
         __c_logger_objmon_unregister
         __c_logger_objmon_dump

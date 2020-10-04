@@ -33,11 +33,13 @@
     <ClInclude Include="..\..\include\log\logger_ini_parser.h" />
     <ClInclude Include="..\..\include\log\logger_interfaces.h" />
     <ClInclude Include="..\..\include\log\logger_moddef.h" />
+    <ClInclude Include="..\..\include\log\logger_modules_command_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_pdefs.h" />
     <ClInclude Include="..\..\include\log\logger_pdetect.h" />
     <ClInclude Include="..\..\include\log\logger_runtime_debugging.h" />
     <ClInclude Include="..\..\include\log\logger_scroll_file_output_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_shmem.h" />
+    <ClInclude Include="..\..\include\log\logger_stacktrace_command_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_strutils.h" />
     <ClInclude Include="..\..\include\log\logger_sysinclib.h" />
     <ClInclude Include="..\..\include\log\logger_sysinfo.h" />

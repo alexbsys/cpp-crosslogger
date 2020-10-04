@@ -4,6 +4,9 @@
 #include <log/logger_win_config_macro_plugin.h>
 #include <log/logger_ini_config_plugin.h>
 #include <log/logger_scroll_file_output_plugin.h>
+#include <log/logger_binary_command_plugin.h>
+#include <log/logger_modules_command_plugin.h>
+#include <log/logger_stacktrace_command_plugin.h>
 
 #include <log/logger.h>
 #include <fstream>
@@ -176,22 +179,34 @@ public:
 
 int main(int argc, char* argv[]) {
 
+
 	// enable all logger messgaes
-	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
+//	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
 
   logging::_logger->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
+  logging::_logger->register_plugin_factory(new logging::logger_binary_command_plugin_factory());
+  logging::_logger->register_plugin_factory(new logging::logger_stacktrace_command_plugin_factory());
+  logging::_logger->register_plugin_factory(new logging::logger_modules_command_plugin_factory());
+  logging::_logger->register_plugin_factory(new logging::logger_win_config_macro_plugin_factory());
+  logging::_logger->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
+
+  
 
 //	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
 //  logging::configurator.set_log_scroll_file_count(6);
 //  logging::configurator.set_log_scroll_file_size(2 * 1024 * 1024);
 //  logging::configurator.set_log_scroll_file_every_run(true);
 
+//  logging::_logger->attach_plugin(new logging::logger_binary_command_plugin());
+//  logging::_logger->attach_plugin(new logging::logger_modules_command_plugin());
+//  logging::_logger->attach_plugin(new logging::logger_stacktrace_command_plugin());
 
-  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
-  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
+//  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
+//  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
   logging::_logger->attach_plugin(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
+  logging::_logger->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd");
   logging::_logger->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
 
 
@@ -200,7 +215,14 @@ int main(int argc, char* argv[]) {
   logging::_logger->dump_state(logging::logger_verbose_info);
   logging::_logger->flush();
 
+
   const char* msg = "HELLO";
+
+  LOG_CMD(0x1001, logging::logger_verbose_info, msg, 6);
+  LOG_CMD(0x1002, logging::logger_verbose_info, NULL, 0);
+//  logging::_logger->log_cmd(0x1001, logging::logger_verbose_info, 0, "", "", 0, msg, 6);
+
+
   LOG_DEBUG("%.8X", msg);
 
 //  (*logging::_logger.get()) << "Hello world" << " test " << 12345;

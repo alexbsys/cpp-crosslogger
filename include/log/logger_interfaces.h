@@ -137,12 +137,13 @@ struct logger_args_command_plugin_interface : public virtual logger_plugin_inter
   virtual void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {}
 
   virtual int plugin_type() const { return kLogPluginTypeArgsCommand; }
-  virtual bool cmd_args(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, va_list arguments) {
+  virtual bool cmd_args(std::string& out_result, int cmd_id, int verb_level, void* addr, 
+    const void* vparam, int iparam, va_list arguments) {
     return false;
   }
 };
 
+#define LOG_INTERFACE_SIGNATURE   19011533
 
 /**
 * \struct   logger_interface  interface. User do not need to use it directly, only via
@@ -150,12 +151,12 @@ struct logger_args_command_plugin_interface : public virtual logger_plugin_inter
 *           automatically
 */
 struct logger_interface {
+  virtual unsigned int get_version() const = 0;
+
   virtual ~logger_interface() {}
 
-  /** Log binary data */
-  virtual void log_binary(int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const char* data,
-    int len) = 0;
+  virtual void set_config_param(const char* key, const char* value) = 0;
+  virtual const char* get_config_param(const char* key) const = 0;
 
   /** Log format, like printf to log */
   virtual void LOG_CDECL log(int verb_level, void* addr, const char* function_name,
@@ -167,7 +168,16 @@ struct logger_interface {
     const char* source_file, int line_number, const char* format,
     va_list arguments) = 0;
 
-  /** Logger stream interface implementation (LOGS_XXXX macroses) */
+  virtual void log_cmd(int cmd_id, int verb_level, void* addr, const char* function_name,
+    const char* source_file, int line_number, const void* vparam, int iparam) = 0;
+
+  virtual void log_cmd_args(int cmd_id, int verb_level, void* addr, const char* function_name,
+    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) = 0;
+
+  virtual void LOG_CDECL log_cmd_vargs(int cmd_id, int verb_level, void* addr, const char* function_name,
+    const char* source_file, int line_number, const void* vparam, int iparam, ...) = 0;
+
+  /** Logger C++ stream interface implementation */
   virtual detail::log_stream stream(int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number) = 0;
 
@@ -179,38 +189,18 @@ struct logger_interface {
 
   virtual void dump_state(int verb_level) = 0;
 
+  virtual bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
+  virtual bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
+
   /** Add logger output interface */
-  virtual bool attach_plugin(logger_plugin_interface* plugin_interface, void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*) = NULL) = 0;
+  virtual bool attach_plugin(logger_plugin_interface* plugin_interface, 
+    void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*) = NULL) = 0;
 
   /** Remove logger output interface */
   virtual bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin = true) = 0;
 
-  virtual bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
-  virtual bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
 
-  virtual void set_config_param(const char* key, const char* value) = 0;
-  virtual const char* get_config_param(const char* key) const = 0;
 
-  virtual void log_cmd(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam) = 0;
-
-  virtual void log_cmd_args(int cmd_id, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) = 0;
-
-  virtual void LOG_CDECL log_cmd_vargs(int cmd_id, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, ...) = 0;
-
-#if LOG_USE_MODULEDEFINITION
-  /** Log all loaded modules information */
-  virtual void log_modules(int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number) = 0;
-#endif  /*LOG_USE_MODULEDEFINITION*/
-
-#if LOG_AUTO_DEBUGGING
-  /** Log current position stack trace */
-  virtual void log_stack_trace(int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number) = 0;
-#endif  // LOG_AUTO_DEBUGGING
   /** Log exception text */
   virtual void log_exception(int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number,

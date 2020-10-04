@@ -238,6 +238,11 @@ enum logger_verbose_level {
 #endif  // LOG_INI_CONFIGURATION
 */
 
+#define LOG_CMD(cmdid,v,p,l) \
+  logging::_logger->log_cmd((cmdid), (v), LOG_GET_CALLER_ADDR, __FUNCTION__, \
+                        __FILE__, __LINE__, (p), (l) )
+
+
 #define LOG_INFO(...)                                                                    \
   logging::_logger->log(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, \
                         __FILE__, __LINE__, __VA_ARGS__)
@@ -258,21 +263,34 @@ enum logger_verbose_level {
   logging::_logger->stream(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
                         __FUNCTION__, __FILE__, __LINE__)
 
-#define LOG_BINARY_INFO(p, stack_frame)                                           \
-  logging::_logger->log_binary(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
-                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_DEBUG(p, stack_frame)                                           \
-  logging::_logger->log_binary(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
-                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_WARNING(p, stack_frame)                                           \
-  logging::_logger->log_binary(logging::logger_verbose_warning, LOG_GET_CALLER_ADDR, \
-                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_ERROR(p, stack_frame)                                           \
-  logging::_logger->log_binary(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
-                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_FATAL(p, stack_frame)                                           \
-  logging::_logger->log_binary(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
-                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
+#define LOG_BINARY_INFO(p, l)                                           \
+     LOG_CMD(0x1001, logging::logger_verbose_info, (p), (l))
+//  logging::_logger->log_binary(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
+//                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
+#define LOG_BINARY_DEBUG(p, l) \
+     LOG_CMD(0x1001, logging::logger_verbose_debug, (p), (l))
+
+
+//  logging::_logger->log_binary(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
+//                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
+#define LOG_BINARY_WARNING(p, l)                                           \
+     LOG_CMD(0x1001, logging::logger_verbose_warning, (p), (l))
+
+
+//logging::_logger->log_binary(logging::logger_verbose_warning, LOG_GET_CALLER_ADDR, \
+//                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
+
+#define LOG_BINARY_ERROR(p, l)                                           \
+     LOG_CMD(0x1001, logging::logger_verbose_error, (p), (l))
+
+//logging::_logger->log_binary(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
+//                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
+
+#define LOG_BINARY_FATAL(p, l)                                           \
+     LOG_CMD(0x1001, logging::logger_verbose_fatal, (p), (l))
+
+//logging::_logger->log_binary(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
+//                               __FUNCTION__, __FILE__, __LINE__, p, stack_frame)
 
 #define LOG_EXCEPTION_DEBUG(e)                                                        \
   logging::_logger->log_exception(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
@@ -334,20 +352,33 @@ enum logger_verbose_level {
 
 #if LOG_USE_MODULEDEFINITION
 #  define LOG_MODULES_DEBUG()                                                           \
-  logging::_logger->log_modules(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
-                                __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1002, logging::logger_verbose_debug, NULL, 0)
+
+
+
+//  logging::_logger->log_modules(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
+//                                __FUNCTION__, __FILE__, __LINE__)
 #  define LOG_MODULES_INFO()                                                           \
-  logging::_logger->log_modules(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
-                                __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1002, logging::logger_verbose_info, NULL, 0)
+
+//logging::_logger->log_modules(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
+//                                __FUNCTION__, __FILE__, __LINE__)
+
 #  define LOG_MODULES_WARNING()                                                           \
-  logging::_logger->log_modules(logging::logger_verbose_warning, LOG_GET_CALLER_ADDR, \
-                                __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1002, logging::logger_verbose_warning, NULL, 0)
+
+//logging::_logger->log_modules(logging::logger_verbose_warning, LOG_GET_CALLER_ADDR, \
+//                                __FUNCTION__, __FILE__, __LINE__)
 #  define LOG_MODULES_ERROR()                                                           \
-  logging::_logger->log_modules(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
-                                __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1002, logging::logger_verbose_error, NULL, 0)
+
+//logging::_logger->log_modules(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
+//                                __FUNCTION__, __FILE__, __LINE__)
 #  define LOG_MODULES_FATAL()                                                           \
-  logging::_logger->log_modules(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
-                                __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1002, logging::logger_verbose_fatal, NULL, 0)
+
+//logging::_logger->log_modules(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
+//                                __FUNCTION__, __FILE__, __LINE__)
 #else  // LOG_USE_MODULEDEFINITION
 #  define LOG_MODULES_DEBUG()
 #  define LOG_MODULES_INFO()
@@ -358,21 +389,32 @@ enum logger_verbose_level {
 
 #if LOG_AUTO_DEBUGGING
 #  define LOG_STACKTRACE_DEBUG()                                                            \
-  logging::_logger->log_stack_trace(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
-                                    __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1003, logging::logger_verbose_debug, NULL, 0)
+
+//logging::_logger->log_stack_trace(logging::logger_verbose_debug, LOG_GET_CALLER_ADDR, \
+//                                    __FUNCTION__, __FILE__, __LINE__)
+
 #  define LOG_STACKTRACE_INFO()                                                            \
-  logging::_logger->log_stack_trace(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
-                                    __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1003, logging::logger_verbose_info, NULL, 0)
+//logging::_logger->log_stack_trace(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
+//                                    __FUNCTION__, __FILE__, __LINE__)
 #  define LOG_STACKTRACE_WARNING()                                                   \
-  logging::_logger->log_stack_trace(logging::logger_verbose_warning,             \
-                                    LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                                    __LINE__)
+     LOG_CMD(0x1003, logging::logger_verbose_warning, NULL, 0)
+
+//logging::_logger->log_stack_trace(logging::logger_verbose_warning,             \
+//                                    LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
+//                                    __LINE__)
 #  define LOG_STACKTRACE_ERROR()                                                            \
-  logging::_logger->log_stack_trace(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
-                                    __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1003, logging::logger_verbose_error, NULL, 0)
+
+//logging::_logger->log_stack_trace(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
+//                                    __FUNCTION__, __FILE__, __LINE__)
+
 #  define LOG_STACKTRACE_FATAL()                                                            \
-  logging::_logger->log_stack_trace(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
-                                    __FUNCTION__, __FILE__, __LINE__)
+     LOG_CMD(0x1003, logging::logger_verbose_fatal, NULL, 0)
+
+//logging::_logger->log_stack_trace(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
+//                                    __FUNCTION__, __FILE__, __LINE__)
 #else  // LOG_AUTO_DEBUGGING
 #  define LOG_STACKTRACE_DEBUG()
 #  define LOG_STACKTRACE_INFO()
@@ -967,57 +1009,6 @@ private:
 
 ////////////////////  Logger implementation  //////////////////////////
 
-class logger_binary_command_plugin : public logger_command_plugin_interface {
-public:
-  const int kBinaryCommandId = 0x1001;
-
-  virtual ~logger_binary_command_plugin() {}
-
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
-    if (max_cmds > 1) {
-      out_cmd_ids[0] = kBinaryCommandId;
-    }
-  }
-
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
-    if (cmd_id != kBinaryCommandId)
-      return false;
-
-    std::stringstream ss;
-    log_binary(ss, reinterpret_cast<const char*>(vparam), iparam);
-    out_result = ss.str();
-    return true;
-  }
-
-private:
-  static void log_binary(std::ostream& stream, const char* data, int len) {
-    const int output_byte_width = 16;
-    int current_element = 0;
-
-    while (current_element < len) {
-      int line_start_element = current_element;
-      stream << str::stringformat("%.4X: ", line_start_element);
-
-      for (int i = 0; i < output_byte_width; i++) {
-        if (current_element < len)
-          stream << str::stringformat("%.2X ",
-            static_cast<unsigned char>(data[current_element++]));
-        else
-          stream << "   ";
-      }
-
-      stream << "|";
-      for (int j = line_start_element; j < line_start_element + output_byte_width; j++) {
-        if (j >= len) break;
-        stream << (static_cast<unsigned char>(data[j]) >= '!' ? data[j] : '.');
-      }
-
-      stream << std::endl;
-    }
-  }
-
-
-};
 
 
 /**
@@ -1038,6 +1029,7 @@ class logger : public logger_interface {
     bool log_sys_info_;
     int filter_verbose_level_;
     bool load_plugins_from_config_;
+    std::string load_plugins_;
 
     log_config() : process_macro_in_log_text_(false), log_sys_info_(true), filter_verbose_level_(logger_verbose_all)
       ,load_plugins_from_config_(true)
@@ -1048,7 +1040,7 @@ class logger : public logger_interface {
   std::map<int, std::list<plugin_data> > plugins_;
   std::list<logger_plugin_factory_interface*> plugins_factories_;
 
-  std::map<int, logger_command_plugin_interface*> cmd_refs_;
+  std::map<int, logger_plugin_interface*> cmd_refs_;
 
   int ref_counter_;
   bool first_write_;
@@ -1351,8 +1343,8 @@ private:
     }
   };
 
-
-  void register_command_plugin(logger_command_plugin_interface* cmd_plugin) {
+  template<typename TCmdPlugin>
+  void register_command_plugin(TCmdPlugin* cmd_plugin) {
     const int kMaxCmdsPerPlugin = 32;
 
     int cmd_ids[kMaxCmdsPerPlugin];
@@ -1389,7 +1381,14 @@ private:
     if (plugin_interface->plugin_type() == kLogPluginTypeCommand) {
       logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(plugin_interface);
       if (cmd_plugin) {
-        register_command_plugin(cmd_plugin);
+        register_command_plugin<logger_command_plugin_interface>(cmd_plugin);
+      }
+    }
+
+    if (plugin_interface->plugin_type() == kLogPluginTypeArgsCommand) {
+      logger_args_command_plugin_interface* cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(plugin_interface);
+      if (cmd_plugin) {
+        register_command_plugin<logger_args_command_plugin_interface>(cmd_plugin);
       }
     }
 
@@ -1411,17 +1410,12 @@ private:
     if (!plugin_interface)
       return false;
 
-/*    plugin_data attached_plugin;
-    attached_plugin.plugin_ = plugin_interface;
-    attached_plugin.factory_ = *it;
-
-    plugins_.at((*it)->plugin_type()).push_back(attached_plugin);
-
-    plugin_interface->attach(this);*/
-
     bool result = attach_plugin_internal(plugin_interface, *it, NULL);
     if (result)
       plugin_interface->config_updated(config_);
+    else {
+      (*it)->destroy(plugin_interface);
+    }
 
     return result;
   }
@@ -1503,19 +1497,11 @@ private:
         return false;
     }
 
-/*    plugin_data attached_plugin;
-    attached_plugin.plugin_ = plugin_interface;
-    attached_plugin.plugin_delete_fn_ = plugin_delete_fn;
-
-    plugins_.at(plugin_type).push_back(attached_plugin);
-
-    if (!plugin_interface->attach(this))
-      return false;
-      */
     bool result = attach_plugin_internal(plugin_interface, NULL, plugin_delete_fn);
+    if (result) {
+      plugin_interface->config_updated(config_);
+    }
 
-
-    plugin_interface->config_updated(config_);
     return result;
   }
 
@@ -1640,6 +1626,9 @@ private:
   }
 #endif  /*LOG_USE_OBJMON*/
 
+  unsigned int get_version() const {
+    return 0x02010101;
+  }
 
   /**
    * \brief    Logger object constructor
@@ -1761,6 +1750,32 @@ private:
   int load_plugins_from_config(const cfg::KeyValueTypeList& config) {
     int modules_loaded = 0;
 
+    // process [logger] LoadPlugins=plugin1 plugin2:name plugin3  values
+    std::string load_plugins = cfg::get_logcfg_string(config, "logger", std::string(), "LoadPlugins");
+    std::vector<std::string> plugins_for_load;
+    str::split(load_plugins, plugins_for_load);
+
+    for (size_t i = 0; i < plugins_for_load.size(); i++) {
+      std::vector<std::string> key_name;
+
+      if (!plugins_for_load[i].size())
+        continue;
+
+      str::split(plugins_for_load[i], key_name, ':');
+      std::string key = key_name[0];
+      std::string name;
+
+      if (key_name.size() > 1)
+        name = key_name[1];
+
+      if (is_plugin_attached(key.c_str(), name.c_str()))
+        continue; // loaded already
+
+      if (create_and_attach_plugin_from_factory(key, name))
+        ++modules_loaded;
+    }
+
+    // process [load] section
     for (cfg::KeyValueTypeList::const_iterator it = config.cbegin(); it != config.cend(); it++) {
       const std::string load_prefix = "load:";
 
@@ -1803,6 +1818,7 @@ private:
     log_config_.header_format_ = cfg::get_logcfg_string(config_, type_name, std::string(), "HdrFormat", default_hdr_format);
     log_config_.process_macro_in_log_text_ = cfg::get_logcfg_int(config_, type_name, std::string(), "ProcessMacroInLogText", 0) ? true : false;
     log_config_.load_plugins_from_config_ = cfg::get_logcfg_int(config_, type_name, std::string(), "LoadPluginsFromConfig", 1) ? true : false;
+    log_config_.load_plugins_ = cfg::get_logcfg_string(config_, type_name, std::string(), "LoadPlugins", std::string());
   }
 
   void reload_config_from_plugins() {
@@ -1908,17 +1924,7 @@ private:
     put_to_stream(verb_level, std::string(), "*** Logger status ends ***");
   }
 
-  /**
-   * \brief   Log binary information method
-   * \param   verb_level     Verbose level
-   * \param   addr           Caller address
-   * \param   function_name  Caller function name
-   * \param   source_file    Caller source file name
-   * \param   line_number    Caller source file line number
-   * \param   data           Pointer to binary information
-   * \param   len            Length of binary information in bytes
-   */
-  void log_binary(int verb_level, void* addr, const char* function_name,
+/*  void log_binary(int verb_level, void* addr, const char* function_name,
                   const char* source_file, int line_number, const char* data, int len) {
     if (!is_message_enabled(verb_level)) return;
 
@@ -1930,9 +1936,19 @@ private:
                            source_file, function_name, line_number, module_name.c_str());
     log_binary(sstream, data, len);
     put_to_stream(verb_level, header, sstream.str());
-  }
+  }*/
 
 
+  /**
+  * \brief   Log binary information method
+  * \param   verb_level     Verbose level
+  * \param   addr           Caller address
+  * \param   function_name  Caller function name
+  * \param   source_file    Caller source file name
+  * \param   line_number    Caller source file line number
+  * \param   format         Format string
+  * \param   ...            Format arguments
+  */
   void LOG_CDECL log(int verb_level, void* addr, const char* function_name,
                      const char* source_file, int line_number, const char* format, ...) {
     if (!is_message_enabled(verb_level)) return;
@@ -1978,8 +1994,12 @@ private:
   void log_cmd(int cmd_id, int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number, const void* vparam, int iparam) {
 
-    std::map<int, logger_command_plugin_interface*>::const_iterator cmd_it = cmd_refs_.find(cmd_id);
+    std::map<int, logger_plugin_interface*>::const_iterator cmd_it = cmd_refs_.find(cmd_id);
     if (cmd_it == cmd_refs_.end())
+      return;
+
+    logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(cmd_it->second);
+    if (!cmd_plugin)
       return;
 
     std::string module_name = try_get_module_name_fast(addr);
@@ -1988,16 +2008,37 @@ private:
         source_file, function_name, line_number, module_name.c_str());
     
     std::string result;
-    bool ret = cmd_it->second->cmd(result, cmd_id, verb_level, addr, vparam, iparam);
+    bool ret = cmd_plugin->cmd(result, cmd_id, verb_level, addr, vparam, iparam);
     if (ret) {
       put_to_stream(verb_level, header, result);
     }
   }
 
-  void log_cmd_args(int cmd_id, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) {}
+  void log_cmd_args(int cmd_id, int verb_level, void* addr, const char* function_name,
+    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) {
 
-  void LOG_CDECL log_cmd_vargs(int cmd_id, void* addr, const char* function_name,
+    std::map<int, logger_plugin_interface*>::const_iterator cmd_it = cmd_refs_.find(cmd_id);
+    if (cmd_it == cmd_refs_.end())
+      return;
+
+    logger_args_command_plugin_interface* args_cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(cmd_it->second);
+    if (!args_cmd_plugin)
+      return;
+
+    std::string module_name = try_get_module_name_fast(addr);
+    std::string header =
+      log_process_macros(log_config_.header_format_, verb_level,
+        source_file, function_name, line_number, module_name.c_str());
+
+    std::string result;
+    bool ret = args_cmd_plugin->cmd_args(result, cmd_id, verb_level, addr, vparam, iparam, args);
+    if (ret) {
+      put_to_stream(verb_level, header, result);
+    }
+
+  }
+
+  void LOG_CDECL log_cmd_vargs(int cmd_id, int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number, const void* vparam, int iparam, ...) {}
 
 
@@ -2062,7 +2103,7 @@ private:
 
     return module_definition::module_name_by_addr(ptr);
   }
-
+  /*
   void log_modules(int verb_level, void* addr, const char* function_name,
                    const char* source_file, int line_number) {
     if (!is_message_enabled(verb_level)) return;
@@ -2124,51 +2165,12 @@ private:
     }
 
     put_to_stream(verb_level, header, sstream.str());
-  }
+  }*/
 #endif  // LOG_USE_MODULEDEFINITION
 
 #if LOG_AUTO_DEBUGGING
 
-#ifdef LOG_PLATFORM_WINDOWS
-  LONG WINAPI exception_catch_stack_trace_filter(EXCEPTION_POINTERS* exp,
-                                                 DWORD exp_code, 
-                                                 std::string* stack_trace) {
-    (void)exp_code;
-
-    std::string config_sym_path = _logger->get_config_param("runtime_debugging::SymPath");
-    *stack_trace = runtime_debugging::get_stack_trace_string(exp->ContextRecord, 2, config_sym_path);
-    return EXCEPTION_EXECUTE_HANDLER;
-  }
-
-#ifdef LOG_COMPILER_MSVC
-#pragma optimize("", off)
-#endif  // LOG_COMPILER_MSVC
-
-  void get_current_stack_trace_string(std::string* stack_trace) {
-    __try {
-      volatile int a = 10;
-      volatile int b = 0;
-      a = a / b;  // division by zero
-    } __except (exception_catch_stack_trace_filter(GetExceptionInformation(),
-                                                   GetExceptionCode(), stack_trace)) {
-    }
-  }
-
-#ifdef LOG_COMPILER_MSVC
-#pragma optimize("", on)
-#endif  // LOG_COMPILER_MSVC
-
-#else   // LOG_PLATFORM_WINDOWS
-
-  void get_current_stack_trace_string(std::string* stack_trace) {
-    const int kStackTraceMaxDepth = 1024;
-
-    void* bt[kStackTraceMaxDepth];
-    int bt_size = backtrace(bt, kStackTraceMaxDepth);
-    *stack_trace = runtime_debugging::get_stack_trace_string(bt, bt_size, 1);
-  }
-#endif  // LOG_PLATFORM_WINDOWS
-
+/*
   void log_stack_trace(int verb_level, void* addr, const char* function_name,
                        const char* src_file, int line_number) {
     if (!is_message_enabled(verb_level)) return;
@@ -2185,7 +2187,7 @@ private:
 
     sstream << "Stack trace:" << std::endl << stack << std::endl;
     put_to_stream(verb_level, header, sstream.str());
-  }
+  }*/
 #endif  // LOG_AUTO_DEBUGGING
 
   void log_exception(int verb_level, void* addr, const char* function_name,
@@ -2500,7 +2502,7 @@ private:
   __inline bool is_message_enabled(int verb_level) const {
     return (log_config_.filter_verbose_level_ & verb_level) ? true : false;
   }
-
+  /*
   void log_binary(std::ostream& stream, const char* data, int len) {
     const int output_byte_width = 16;
     int current_element = 0;
@@ -2526,7 +2528,7 @@ private:
       stream << std::endl;
     }
   }
-
+  */
   /**
    * \brief    Get verbose level value string description
    * \param    verb_level      Verbose level value
@@ -2942,12 +2944,22 @@ extern void(LOG_CDECL* __c_logger_log)(int verbose_level, void* caller_addr,
 extern void(LOG_CDECL* __c_logger_log_args)(int verbose_level, void* caller_addr,
                                             const char* function, const char* file,
                                             int line, const char* format, va_list args);
+
+extern void(LOG_CDECL* __c_logger_log_cmd)(int cmd_id, int verbose_level, void* caller_addr,
+  const char* function, const char* file,
+  int line, const void* vparam, int iparam);
+
+extern void(LOG_CDECL* __c_logger_log_cmd_args)(int cmd_id, int verbose_level, void* caller_addr,
+  const char* function, const char* file,
+  int line, const void* vparam, int iparam, va_list args);
+
+/*
 extern void(LOG_CDECL* __c_logger_log_binary)(int verbose_level, void* caller_addr,
                                               const char* function, const char* file,
                                               int line, const char* data, int len);
 
 extern void(LOG_CDECL* __c_logger_set_verbose_level)(int verbose_level);
-
+*/
 extern void(LOG_CDECL* __c_logger_objmon_register)(size_t hash_code,
                                                    const char* type_name, void* ptr);
 extern void(LOG_CDECL* __c_logger_objmon_unregister)(size_t hash_code, void* ptr);
@@ -2955,17 +2967,32 @@ extern void(LOG_CDECL* __c_logger_objmon_dump)(int verbose_level);
 
 extern void(LOG_CDECL* __c_logger_set_current_thread_name)(const char* thread_name);
 
+extern void(LOG_CDECL* __c_logger_set_config_param)(const char* key, const char* value);
+extern int(LOG_CDECL* __c_logger_get_config_param)(const char* key, char* value, int buffer_size);
+
+
 #else  // LOG_USE_DLL
 void __c_logger_log(int verbose_level, void* caller_addr, const char* function,
                     const char* file, int line, const char* format, ...);
 void __c_logger_log_args(int verbose_level, void* caller_addr, const char* function,
                          const char* file, int line, const char* format, va_list args);
-void __c_logger_log_binary(int verbose_level, void* caller_addr, const char* function,
-                           const char* file, int line, const char* data, int len);
+
+void __c_logger_log_cmd(int cmd_id, int verbose_level, void* caller_addr, const char* function,
+  const char* file, int line, const void* vparam, int iparam);
+
+void __c_logger_log_cmd_args(int cmd_id, int verbose_level, void* caller_addr, const char* function,
+  const char* file, int line, const void* vparam, int iparam, va_list args);
+
+//void __c_logger_log_binary(int verbose_level, void* caller_addr, const char* function,
+//                           const char* file, int line, const char* data, int len);
 
 void __c_logger_objmon_register(size_t hash_code, const char* type_name, void* ptr);
 void __c_logger_objmon_unregister(size_t hash_code, void* ptr);
 void __c_logger_objmon_dump(int verbose_level);
+
+void __c_logger_set_config_param(const char* key, const char* value);
+int __c_logger_get_config_param(const char* key, char* value, int buffer_size);
+
 
 void __c_logger_set_current_thread_name(const char* thread_name);
 

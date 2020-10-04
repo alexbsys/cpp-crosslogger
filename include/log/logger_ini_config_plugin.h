@@ -18,13 +18,14 @@ namespace logging {
 
 class logger_ini_config_plugin : public logger_config_plugin_interface {
 public:
-  logger_ini_config_plugin(const char* ini_file_paths = NULL)
-    : ini_file_paths_(ini_file_paths == NULL ? std::string() : ini_file_paths) {
+  logger_ini_config_plugin(const char* plugin_name = NULL)
+    : plugin_name_(plugin_name == NULL ? std::string() : plugin_name) {
   }
 
   virtual ~logger_ini_config_plugin() {}
 
   const char* type() const { return "ini_config"; }
+  const char* name() const { return plugin_name_.c_str(); }
 
   bool reload(cfg::KeyValueTypeList& config) {
 #if LOG_INI_CONFIGURATION
@@ -73,6 +74,15 @@ protected:
 
 private:
   std::string ini_file_paths_;
+  std::string plugin_name_;
+};
+
+
+class logger_ini_config_plugin_factory : public logger_plugin_default_factory<logger_ini_config_plugin> {
+public:
+  logger_ini_config_plugin_factory()
+    : logger_plugin_default_factory<logger_ini_config_plugin>("ini_config", kLogPluginTypeConfig) {}
+  virtual ~logger_ini_config_plugin_factory() {}
 };
 
 

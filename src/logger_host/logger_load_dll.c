@@ -45,7 +45,7 @@ void* __logger_dll_handle = NULL;
 int __logger_try_load = 0;
 
 int LOG_CDECL logger_load_dll();
-
+/*
 void LOG_CDECL __c_logger_log_modules_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line) 
 { 
 	if (logger_load_dll())
@@ -57,7 +57,7 @@ void LOG_CDECL __c_logger_log_stack_trace_dummy(int verbose_level, void* caller_
 	if (logger_load_dll()) 
 		__c_logger_log_stack_trace(verbose_level, caller_addr, function, file, line);
 }
-
+*/
 void LOG_CDECL __c_logger_log_args_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) 
 {
 	if (logger_load_dll())
@@ -75,10 +75,16 @@ void LOG_CDECL __c_logger_log_dummy(int verbose_level, void* caller_addr, const 
 	va_end(arguments);
 }
 
-void LOG_CDECL __c_logger_log_binary_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len) 
+void LOG_CDECL __c_logger_log_cmd_dummy(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) 
 { 
-	if (logger_load_dll() && __c_logger_log_binary != __c_logger_log_binary_dummy)
-		__c_logger_log_binary(verbose_level, caller_addr, function, file, line, data, len);
+	if (logger_load_dll() && __c_logger_log_cmd != __c_logger_log_cmd_dummy)
+		__c_logger_log_cmd(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam);
+}
+
+void LOG_CDECL __c_logger_log_cmd_args_dummy(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args)
+{
+  if (logger_load_dll() && __c_logger_log_cmd_args != __c_logger_log_cmd_args_dummy)
+    __c_logger_log_cmd_args(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
 }
 
 void LOG_CDECL __c_logger_objmon_register_dummy(size_t hash_code, const char* type_name, void* ptr) {
@@ -101,40 +107,57 @@ void LOG_CDECL __c_logger_set_current_thread_name_dummy(const char* thread_name)
     __c_logger_set_current_thread_name(thread_name);
 }
 
-void LOG_CDECL __c_logger_set_verbose_level_dummy(int verbose_level) {
-  if (logger_load_dll() && __c_logger_set_verbose_level != __c_logger_set_verbose_level_dummy)
-    __c_logger_set_verbose_level(verbose_level);
+void LOG_CDECL __c_logger_set_config_param_dummy(const char* key, const char* value) {
+  if (logger_load_dll() && __c_logger_set_config_param != __c_logger_set_config_param_dummy)
+    __c_logger_set_config_param(key, value);
+}
+
+int LOG_CDECL __c_logger_get_config_param_dummy(const char* key, char* value, int buffer_size) {
+  if (logger_load_dll() && __c_logger_get_config_param != __c_logger_get_config_param_dummy)
+    return __c_logger_get_config_param(key, value, buffer_size);
+
+  return 0;
 }
 
 
-void (LOG_CDECL *__c_logger_log_modules)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_modules_dummy;
-void (LOG_CDECL * __c_logger_log_stack_trace)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_stack_trace_dummy;
+//void (LOG_CDECL *__c_logger_log_modules)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_modules_dummy;
+//void (LOG_CDECL * __c_logger_log_stack_trace)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_stack_trace_dummy;
 void (LOG_CDECL *__c_logger_log)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) = &__c_logger_log_dummy;
 void (LOG_CDECL *__c_logger_log_args)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) = &__c_logger_log_args_dummy;
-void (LOG_CDECL *__c_logger_log_binary)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len) = &__c_logger_log_binary_dummy;
+//void (LOG_CDECL *__c_logger_log_binary)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len) = &__c_logger_log_binary_dummy;
+void (LOG_CDECL *__c_logger_log_cmd)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) = &__c_logger_log_cmd_dummy;
+void (LOG_CDECL *__c_logger_log_cmd_args)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) = &__c_logger_log_cmd_args_dummy;
 
 void (LOG_CDECL *__c_logger_objmon_register)(size_t hash_code, const char* type_name, void* ptr) = &__c_logger_objmon_register_dummy;
 void (LOG_CDECL *__c_logger_objmon_unregister)(size_t hash_code, void* ptr) = &__c_logger_objmon_unregister_dummy;
 void (LOG_CDECL *__c_logger_objmon_dump)(int verbose_level) = &__c_logger_objmon_dump_dummy;
 
 void (LOG_CDECL *__c_logger_set_current_thread_name)(const char* thread_name) = &__c_logger_set_current_thread_name_dummy;
-void (LOG_CDECL *__c_logger_set_verbose_level)(int verbose_level) = &__c_logger_set_verbose_level_dummy;
+
+void (LOG_CDECL *__c_logger_set_config_param)(const char* key, const char* value) = &__c_logger_set_config_param_dummy;
+int (LOG_CDECL *__c_logger_get_config_param)(const char* key, char* value, int buffer_size) = &__c_logger_get_config_param_dummy;
 
 
 void logger_restore_dummies()
 {
-	__c_logger_log_modules = &__c_logger_log_modules_dummy;
-	__c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
+//	__c_logger_log_modules = &__c_logger_log_modules_dummy;
+//	__c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
 	__c_logger_log = &__c_logger_log_dummy;
-	__c_logger_log_binary = &__c_logger_log_binary_dummy;
+//	__c_logger_log_binary = &__c_logger_log_binary_dummy;
 	__c_logger_log_args = &__c_logger_log_args_dummy;
+
+  __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
+  __c_logger_log_cmd_args = &__c_logger_log_cmd_args_dummy;
 
   __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
   __c_logger_objmon_unregister = &__c_logger_objmon_unregister_dummy;
   __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
 
   __c_logger_set_current_thread_name = &__c_logger_set_current_thread_name_dummy;
-  __c_logger_set_verbose_level = &__c_logger_set_verbose_level_dummy;
+  __c_logger_set_config_param = &__c_logger_set_config_param_dummy;
+  __c_logger_get_config_param = &__c_logger_get_config_param_dummy;
+
+//  __c_logger_set_verbose_level = &__c_logger_set_verbose_level_dummy;
 
 	if (__logger_dll_handle)
 	{
@@ -235,14 +258,20 @@ int LOG_CDECL logger_load_dll()
   __c_logger_log = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...))
     LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log");
 
-  __c_logger_log_binary = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_binary");
+//  __c_logger_log_binary = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len))
+//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_binary");
 
-  __c_logger_log_modules = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_modules");
+  __c_logger_log_cmd = (void (LOG_CDECL *)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam))
+    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_cmd");
 
-  __c_logger_log_stack_trace = (void (LOG_CDECL*)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_stack_trace");
+  __c_logger_log_cmd_args = (void (LOG_CDECL *)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args))
+    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_cmd_args");
+
+//  __c_logger_log_modules = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
+//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_modules");
+
+//  __c_logger_log_stack_trace = (void (LOG_CDECL*)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
+//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_stack_trace");
 
   __c_logger_objmon_register = (void (LOG_CDECL*)(size_t, const char*, void*))
     LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_objmon_register");
@@ -256,8 +285,11 @@ int LOG_CDECL logger_load_dll()
   __c_logger_set_current_thread_name = (void(LOG_CDECL*)(const char*))
     LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_set_current_thread_name");
 
-  __c_logger_set_verbose_level = (void(LOG_CDECL*)(int))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_set_verbose_level");
+  __c_logger_set_config_param = (void(LOG_CDECL*)(const char*, const char*))
+    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_set_config_param");
+
+  __c_logger_get_config_param = (int(LOG_CDECL*)(const char*, char*, int))
+    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_get_config_param");
 
   if (!__c_logger_objmon_register)
     __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
@@ -268,19 +300,29 @@ int LOG_CDECL logger_load_dll()
   if (!__c_logger_objmon_dump)
     __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
 
-  if (!__c_logger_log_modules)
-    __c_logger_log_modules = &__c_logger_log_modules_dummy;
+  if (!__c_logger_log_cmd)
+    __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
 
-  if (!__c_logger_log_stack_trace)
-    __c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
+  if (!__c_logger_log_cmd_args)
+    __c_logger_log_cmd_args = &__c_logger_log_cmd_args_dummy;
+
+
+//  if (!__c_logger_log_modules)
+//    __c_logger_log_modules = &__c_logger_log_modules_dummy;
+
+//  if (!__c_logger_log_stack_trace)
+//    __c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
 
   if (!__c_logger_set_current_thread_name)
     __c_logger_set_current_thread_name = &__c_logger_set_current_thread_name_dummy;
 
-  if (!__c_logger_set_verbose_level)
-    __c_logger_set_verbose_level = &__c_logger_set_verbose_level_dummy;
+  if (!__c_logger_set_config_param)
+    __c_logger_set_config_param = &__c_logger_set_config_param_dummy;
 
-  if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_binary || !__c_logger_log_modules || !__c_logger_log_stack_trace
+  if (!__c_logger_get_config_param)
+    __c_logger_get_config_param = &__c_logger_get_config_param_dummy;
+
+  if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args 
       || !__c_logger_objmon_register || !__c_logger_objmon_unregister || !__c_logger_objmon_dump)
 	{
 		logger_restore_dummies();

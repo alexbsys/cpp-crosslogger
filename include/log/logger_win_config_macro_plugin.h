@@ -17,12 +17,16 @@ namespace logging {
 
 class logger_win_config_macro_plugin : public logger_config_macro_plugin_interface {
 public:
-  logger_win_config_macro_plugin() {}
+  logger_win_config_macro_plugin(const char* plugin_name = NULL) 
+    : plugin_name_(plugin_name ? plugin_name : std::string()) {}
+
   virtual ~logger_win_config_macro_plugin() {}
 
   const char* type() const {
     return "win_config_macro";
   }
+
+  const char* name() const { return plugin_name_.c_str(); }
 
   virtual bool process(std::string& str) {
     int replaced;
@@ -160,7 +164,18 @@ protected:
 
     return str;
   }
+
+private:
+  std::string plugin_name_;
 };
+
+class logger_win_config_macro_plugin_factory : public logger_plugin_default_factory<logger_win_config_macro_plugin> {
+public:
+  logger_win_config_macro_plugin_factory()
+    : logger_plugin_default_factory<logger_win_config_macro_plugin>("win_config_macro", kLogPluginTypeConfigMacro) {}
+  virtual ~logger_win_config_macro_plugin_factory() {}
+};
+
 
 }//namespace logging
 
