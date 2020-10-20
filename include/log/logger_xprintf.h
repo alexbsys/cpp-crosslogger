@@ -182,6 +182,13 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 		case 'X':					/* Hexdecimal */
 			r = 16;
 			break;
+    case 'P':         /* Pointer */
+      f |= kLongFlag;
+      if (sizeof(int) == 8)
+        f |= kValue64BitFlag;
+
+      r = 16;
+      break;
 		default:					/* Unknown type (passthrough) */
             if (length + max_chars_produced_by_xputc >= out_chars_count)
               return -1;

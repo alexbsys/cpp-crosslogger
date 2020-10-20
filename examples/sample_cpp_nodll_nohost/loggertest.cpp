@@ -7,6 +7,8 @@
 #include <log/logger_binary_command_plugin.h>
 #include <log/logger_modules_command_plugin.h>
 #include <log/logger_stacktrace_command_plugin.h>
+#include <log/logger_crashhandler_command_plugin.h>
+#include <log/logger_objmon_command_plugin.h>
 
 #include <log/logger.h>
 #include <fstream>
@@ -26,8 +28,14 @@
 
 
 /// !!!! Need to define once in one of cpp file (if logger.cpp was not used)
-DEFINE_LOGGER();
-
+//DEFINE_LOGGER();
+logging::logger_singleton_interface<logging::logger_interface>* logging::_logger(
+  new logging::singleton<logging::logger_interface, logging::detail::logger>(\
+    &logging::logger_interface::ref, &logging::logger_interface::deref, \
+    &logging::logger_interface::ref_counter, \
+    (logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), \
+    false));
+//void* logging::unhandled_exceptions_processor::prev_exception_filter_ = NULL;
 
 
 
@@ -168,6 +176,17 @@ void multithread_test() {
   }
 }
 
+class Test {
+public:
+  Test() {
+    LOG_OBJMON_REGISTER_INSTANCE();
+  }
+
+  ~Test() {
+    LOG_OBJMON_UNREGISTER_INSTANCE();
+  }
+};
+
 class LogToConsole : public virtual logging::logger_output_plugin_interface {
 public:
   virtual ~LogToConsole() {}
@@ -183,14 +202,14 @@ int main(int argc, char* argv[]) {
 	// enable all logger messgaes
 //	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
 
-  logging::_logger->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
-  logging::_logger->register_plugin_factory(new logging::logger_binary_command_plugin_factory());
-  logging::_logger->register_plugin_factory(new logging::logger_stacktrace_command_plugin_factory());
-  logging::_logger->register_plugin_factory(new logging::logger_modules_command_plugin_factory());
-  logging::_logger->register_plugin_factory(new logging::logger_win_config_macro_plugin_factory());
-  logging::_logger->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
-
-  
+  logging::_logger->get()->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
+  logging::_logger->get()->register_plugin_factory(new logging::logger_binary_command_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_stacktrace_command_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_modules_command_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_win_config_macro_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_crashhandler_command_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_objmon_command_plugin_factory());
 
 //	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
 //  logging::configurator.set_log_scroll_file_count(6);
@@ -203,18 +222,19 @@ int main(int argc, char* argv[]) {
 
 //  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
 //  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
-  logging::_logger->attach_plugin(new LogToConsole());
+  logging::_logger->get()->attach_plugin(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
-  logging::_logger->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd");
-  logging::_logger->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
+  logging::_logger->get()->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd");
+  logging::_logger->get()->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
 
 
-  logging::_logger->reload_config();
+  logging::_logger->get()->reload_config();
 
-  logging::_logger->dump_state(logging::logger_verbose_info);
-  logging::_logger->flush();
+  logging::_logger->get()->dump_state(logging::logger_verbose_info);
+  logging::_logger->get()->flush();
 
+  LOG_CMD(0x100A, logging::logger_verbose_debug, NULL, 0);
 
   const char* msg = "HELLO";
 
@@ -222,6 +242,12 @@ int main(int argc, char* argv[]) {
   LOG_CMD(0x1002, logging::logger_verbose_info, NULL, 0);
 //  logging::_logger->log_cmd(0x1001, logging::logger_verbose_info, 0, "", "", 0, msg, 6);
 
+  {
+    Test test;
+    LOG_OBJMON_DUMP_INFO();
+  }
+
+  LOG_OBJMON_DUMP_INFO();
 
   LOG_DEBUG("%.8X", msg);
 
@@ -266,12 +292,12 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("TEST TEST TEST TEST TEST TEST TEST");
 	}
 
-	LOG_INFO("============= Multithread test ============");
-	multithread_test();
+//	LOG_INFO("============= Multithread test ============");
+//	multithread_test();
 
-//	LOG_DEBUG("============ Crash dump test ============");
-//	BYTE* asdf = (BYTE*)0x0;
-//	*asdf = 23;
+	LOG_DEBUG("============ Crash dump test ============");
+	BYTE* asdf = (BYTE*)0x0;
+	*asdf = 23;
 
 	return 0;
 }

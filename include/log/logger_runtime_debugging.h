@@ -336,7 +336,7 @@ public:
       sstream << "[" << n << "] "
         << "<--";
       if (frame.undecorated_sym_name.size())
-        sstream << str::stringformat(" %s %+ld bytes ", frame.undecorated_sym_name.c_str(),
+        sstream << str::stringformat(" %s +%ld bytes ", frame.undecorated_sym_name.c_str(),
           frame.offset_from_symbol_bytes);
 
       if (frame.undecorated_full_sym_name.size())
@@ -344,7 +344,7 @@ public:
           frame.undecorated_full_sym_name.c_str());
 
       if (frame.src_file_name.size() || frame.src_file_line)
-        sstream << str::stringformat("[Line: %s(%lu) %+ld bytes] ", frame.src_file_name.c_str(),
+        sstream << str::stringformat("[Line: %s(%lu) +%ld bytes] ", frame.src_file_name.c_str(),
           frame.src_file_line, frame.offset_from_line_bytes);
 
       if (frame.module_name.size()) {

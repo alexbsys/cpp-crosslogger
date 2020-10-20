@@ -28,12 +28,16 @@
     <ClInclude Include="..\..\include\log\logger_cfgfn.h" />
     <ClInclude Include="..\..\include\log\logger_cfgcheck.h" />
     <ClInclude Include="..\..\include\log\logger_config.h" />
+    <ClInclude Include="..\..\include\log\logger_crashhandler_command_plugin.h" />
+    <ClInclude Include="..\..\include\log\logger_exception_command_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_get_caller_addr.h" />
     <ClInclude Include="..\..\include\log\logger_ini_config_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_ini_parser.h" />
     <ClInclude Include="..\..\include\log\logger_interfaces.h" />
     <ClInclude Include="..\..\include\log\logger_moddef.h" />
     <ClInclude Include="..\..\include\log\logger_modules_command_plugin.h" />
+    <ClInclude Include="..\..\include\log\logger_mt.h" />
+    <ClInclude Include="..\..\include\log\logger_objmon_command_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_pdefs.h" />
     <ClInclude Include="..\..\include\log\logger_pdetect.h" />
     <ClInclude Include="..\..\include\log\logger_runtime_debugging.h" />
@@ -43,8 +47,10 @@
     <ClInclude Include="..\..\include\log\logger_strutils.h" />
     <ClInclude Include="..\..\include\log\logger_sysinclib.h" />
     <ClInclude Include="..\..\include\log\logger_sysinfo.h" />
+    <ClInclude Include="..\..\include\log\logger_userdefs.h" />
     <ClInclude Include="..\..\include\log\logger_utils.h" />
     <ClInclude Include="..\..\include\log\logger_varargs.h" />
+    <ClInclude Include="..\..\include\log\logger_verbose.h" />
     <ClInclude Include="..\..\include\log\logger_win_config_macro_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_win_registry.h" />
     <ClInclude Include="..\..\include\log\logger_xprintf.h" />

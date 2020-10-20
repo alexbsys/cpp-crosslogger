@@ -101,5 +101,23 @@
     <ClInclude Include="..\..\include\log\logger_stacktrace_command_plugin.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_crashhandler_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_exception_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_verbose.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_userdefs.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_objmon_command_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_mt.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

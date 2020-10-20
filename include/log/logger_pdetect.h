@@ -123,6 +123,26 @@
 #define LOG_COMPILER_MINGW
 #endif  // defined(__MINGW32__) || defined(__MINGW64__)
 
+#if defined(__clang__)
+#define LOG_COMPILER_CLANG
+#endif /*__clang__*/
+
+#if defined(__xlc__)
+#define LOG_COMPILER_XLC
+#endif /*__xlc__*/
+
+#if defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_CLANG) || defined(LOG_COMPILER_XLC)
+#define LOG_COMPILER_GCC_COMPAT
+#endif /*LOG_COMPILER_GCC || LOG_COMPILER_CLANG || LOG_COMPILER_XLC*/
+
+#ifdef LOG_CPP
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+#define LOG_CPP_X11  1
+#else /*__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)*/
+#define LOG_CPP_X11  0
+#endif /*__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)*/
+#endif /*LOG_CPP*/
+
 //////////////////////////////////////////////////////////////
 //////////// POSIX BASED PLATFORM CONFIGURATION //////////////
 

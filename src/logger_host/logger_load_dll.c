@@ -86,7 +86,7 @@ void LOG_CDECL __c_logger_log_cmd_args_dummy(int cmd_id, int verbose_level, void
   if (logger_load_dll() && __c_logger_log_cmd_args != __c_logger_log_cmd_args_dummy)
     __c_logger_log_cmd_args(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
 }
-
+/*
 void LOG_CDECL __c_logger_objmon_register_dummy(size_t hash_code, const char* type_name, void* ptr) {
   if (logger_load_dll() && __c_logger_objmon_register != __c_logger_objmon_register_dummy)
     __c_logger_objmon_register(hash_code, type_name, ptr);
@@ -101,7 +101,7 @@ void LOG_CDECL __c_logger_objmon_dump_dummy(int verbose_level) {
   if (logger_load_dll() && __c_logger_objmon_dump != __c_logger_objmon_dump_dummy)
     __c_logger_objmon_dump(verbose_level);
 }
-
+*/
 void LOG_CDECL __c_logger_set_current_thread_name_dummy(const char* thread_name) {
   if (logger_load_dll() && __c_logger_set_current_thread_name != __c_logger_set_current_thread_name_dummy)
     __c_logger_set_current_thread_name(thread_name);
@@ -128,9 +128,9 @@ void (LOG_CDECL *__c_logger_log_args)(int verbose_level, void* caller_addr, cons
 void (LOG_CDECL *__c_logger_log_cmd)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) = &__c_logger_log_cmd_dummy;
 void (LOG_CDECL *__c_logger_log_cmd_args)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) = &__c_logger_log_cmd_args_dummy;
 
-void (LOG_CDECL *__c_logger_objmon_register)(size_t hash_code, const char* type_name, void* ptr) = &__c_logger_objmon_register_dummy;
-void (LOG_CDECL *__c_logger_objmon_unregister)(size_t hash_code, void* ptr) = &__c_logger_objmon_unregister_dummy;
-void (LOG_CDECL *__c_logger_objmon_dump)(int verbose_level) = &__c_logger_objmon_dump_dummy;
+//void (LOG_CDECL *__c_logger_objmon_register)(size_t hash_code, const char* type_name, void* ptr) = &__c_logger_objmon_register_dummy;
+//void (LOG_CDECL *__c_logger_objmon_unregister)(size_t hash_code, void* ptr) = &__c_logger_objmon_unregister_dummy;
+//void (LOG_CDECL *__c_logger_objmon_dump)(int verbose_level) = &__c_logger_objmon_dump_dummy;
 
 void (LOG_CDECL *__c_logger_set_current_thread_name)(const char* thread_name) = &__c_logger_set_current_thread_name_dummy;
 
@@ -149,9 +149,9 @@ void logger_restore_dummies()
   __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
   __c_logger_log_cmd_args = &__c_logger_log_cmd_args_dummy;
 
-  __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
-  __c_logger_objmon_unregister = &__c_logger_objmon_unregister_dummy;
-  __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
+//  __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
+//  __c_logger_objmon_unregister = &__c_logger_objmon_unregister_dummy;
+//  __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
 
   __c_logger_set_current_thread_name = &__c_logger_set_current_thread_name_dummy;
   __c_logger_set_config_param = &__c_logger_set_config_param_dummy;
@@ -291,7 +291,7 @@ int LOG_CDECL logger_load_dll()
   __c_logger_get_config_param = (int(LOG_CDECL*)(const char*, char*, int))
     LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_get_config_param");
 
-  if (!__c_logger_objmon_register)
+/*  if (!__c_logger_objmon_register)
     __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
 
   if (!__c_logger_objmon_unregister)
@@ -299,7 +299,7 @@ int LOG_CDECL logger_load_dll()
 
   if (!__c_logger_objmon_dump)
     __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
-
+*/
   if (!__c_logger_log_cmd)
     __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
 
@@ -323,7 +323,7 @@ int LOG_CDECL logger_load_dll()
     __c_logger_get_config_param = &__c_logger_get_config_param_dummy;
 
   if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args 
-      || !__c_logger_objmon_register || !__c_logger_objmon_unregister || !__c_logger_objmon_dump)
+     /* || !__c_logger_objmon_register || !__c_logger_objmon_unregister || !__c_logger_objmon_dump*/)
 	{
 		logger_restore_dummies();
 		return 0;

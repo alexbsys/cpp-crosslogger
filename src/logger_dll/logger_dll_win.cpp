@@ -1,27 +1,21 @@
 
-
 #include <log/logger.h>
 
 #ifdef LOG_PLATFORM_WINDOWS
 
 #include <windows.h>
 
-int WINAPI DllMain( HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved )
-{
-    (void)hDllHandle;
-    (void)lpreserved;
+int WINAPI DllMain(HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved) {
+  (void)hDllHandle;
+  (void)lpreserved;
 
-	switch (dwReason)
-	{
+	switch (dwReason) {
 	case DLL_PROCESS_ATTACH:
-
 		break;
 
 	case DLL_PROCESS_DETACH:
-
 		break;
 	}
-
 
 	return TRUE;
 }

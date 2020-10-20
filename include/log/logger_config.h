@@ -213,6 +213,14 @@
 #endif /*LOG_MULTITHREADED*/
 
 
+#if LOG_ONLY_DEBUG
+#ifdef DEBUG
+#undef LOG_ENABLED
+#define LOG_ENABLED 0
+#endif  // DEBUG
+#endif  // LOG_ONLY_DEBUG
+
+
 ////////////////  CONFIGURATION SECTION END  /////////////////
 //////////////////////////////////////////////////////////////
 

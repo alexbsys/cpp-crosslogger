@@ -5,6 +5,7 @@
 #include "logger_config.h"
 #include "logger_pdefs.h"
 #include "logger_cfgfn.h"
+#include "logger_get_caller_addr.h"
 #include <string>
 
 namespace logging {
@@ -199,33 +200,32 @@ struct logger_interface {
   /** Remove logger output interface */
   virtual bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin = true) = 0;
 
-
-
-  /** Log exception text */
-  virtual void log_exception(int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number,
-    const char* user_msg) = 0;
-
-  /** Log std::exception */
-  virtual void log_exception(int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number,
-    std::exception* e) = 0;
-
 #if LOG_USE_OBJMON
   /** Register object instance */
-  virtual void log_objmon_register(size_t hash_code, const char* type_name,
-    void* ptr) = 0;
+//  virtual void log_objmon_register(size_t hash_code, const char* type_name,
+//    void* ptr) = 0;
 
   /** Unregister object instance */
-  virtual void log_objmon_unregister(size_t hash_code, void* ptr) = 0;
+//  virtual void log_objmon_unregister(size_t hash_code, void* ptr) = 0;
 
   /** Dump all registered objects instances */
-  virtual void log_objmon_dump(int verb_level) = 0;
+//  virtual void log_objmon_dump(int verb_level) = 0;
 #endif  // LOG_USE_OBJMON
 
-  virtual void ref() = 0;
-  virtual void deref() = 0;
-  virtual int ref_counter() = 0;
+  virtual int ref() = 0;
+  virtual int deref() = 0;
+  virtual int ref_counter() const = 0;
+};
+
+template<typename _TIf>
+class logger_singleton_interface {
+public:
+  virtual ~logger_singleton_interface() {}
+  virtual _TIf* get() = 0;
+  virtual void reset(_TIf* ptr, bool need_delete = true) = 0;
+  virtual void release() = 0;
+
+  __inline _TIf* operator->() { return get(); }
 };
 
 

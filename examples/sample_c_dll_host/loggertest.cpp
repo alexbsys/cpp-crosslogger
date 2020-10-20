@@ -165,10 +165,10 @@ int main(int argc, char* argv[])
 {
 	unsigned long start_ms;
 	// enable all logger messgaes
-	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
+//	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
 
 	// enable to take configuration from registry
-	LOG_SET_REG_CONFIG_PATH("HKCU\\Software\\Logtest");
+//	LOG_SET_REG_CONFIG_PATH("HKCU\\Software\\Logtest");
 //	Logging::Configurator.SetLogFileName(logging::Utils::GetApplicationFileName());
 
 #ifdef LOG_PLATFORM_WINDOWS

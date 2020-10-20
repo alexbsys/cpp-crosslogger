@@ -9,9 +9,9 @@ EXPORTS
 ;	__c_logger_log_stack_trace
 __c_logger_set_config_param
 __c_logger_get_config_param
-        __c_logger_objmon_register
-        __c_logger_objmon_unregister
-        __c_logger_objmon_dump
-        __c_logger_set_current_thread_name
+;        __c_logger_objmon_register
+;        __c_logger_objmon_unregister
+;        __c_logger_objmon_dump
+;        __c_logger_set_current_thread_name
 
 
