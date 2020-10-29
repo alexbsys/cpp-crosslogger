@@ -44,6 +44,10 @@ struct logger_plugin_interface {
 
   virtual bool attach(logger_interface* logger) { return true; }
   virtual void detach(logger_interface* logger) {}
+
+  virtual long ref() = 0;
+  virtual long unref() = 0;
+  virtual long refcount() const = 0;
 };
 
 struct logger_plugin_factory_interface {

@@ -483,18 +483,201 @@ struct log_macro_cache_t {
 #endif /*LOG_USE_MACRO_HEADER_CACHE*/
 
 
+class plugin_manager {
+public:
+
+  plugin_manager() {
+
+  }
+
+  ~plugin_manager() {
+
+  }
+
+  /**
+  * \brief    Create new plugin instance from factory and attach it
+  * \param    type    Plugin type name
+  * \param    name    Instance name
+  * \return   true - plugin successfully created and attached,
+  *           false - plugin was not attached, reasons may be: plugin with same type and name already attached, plugin factory was not found for specified type,
+  *                   plugin factory cannot create plugin object, plugin created but cannot be attached
+  */
+  bool create_and_attach_plugin_from_factory(const std::string& type, const std::string& name) {
+    if (is_plugin_attached(type.c_str(), name.c_str()))
+      return false;
+
+    std::list<logger_plugin_factory_interface*>::const_iterator it =
+      std::find_if(plugins_factories_.begin(), plugins_factories_.end(), find_plugin_type<logger_plugin_factory_interface>(type));
+
+    if (it == plugins_factories_.end())
+      return false;
+
+    logger_plugin_interface* plugin_interface = (*it)->create(name.c_str());
+    if (!plugin_interface)
+      return false;
+
+    bool result = attach_plugin_internal(plugin_interface, *it, NULL);
+    if (result)
+      plugin_interface->config_updated(config_);
+    else {
+      (*it)->destroy(plugin_interface);
+    }
+
+    return result;
+  }
+
+
+  template<typename TPlugin>
+  void query_plugins(int plugin_type, std::vector<TPlugin*>& plugins) const {
+
+    plugins.clear();
+    plugins.reserve(plugins_.at(plugin_type).size());
+
+    for (std::list<plugin_data>::const_iterator it = plugins_.at(plugin_type).cbegin();
+      it != plugins_.at(plugin_type).cend(); it++) {
+      TPlugin* plugin = dynamic_cast<TPlugin*>(plugin_);
+      if (plugin)
+        plugins.push_back(plugin);
+    }
+  }
+
+  /** Add logger output interface */
+  bool attach_plugin(logger_plugin_interface* plugin_interface, void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
+    if (!plugin_interface)
+      return false;
+
+    int plugin_type = plugin_interface->plugin_type();
+    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
+      return false;
+
+    // check that plugin was not added already
+    for (std::list<plugin_data>::iterator it = plugins_.at(plugin_type).begin(); it != plugins_.at(plugin_type).end(); it++) {
+      if (it->plugin_ == plugin_interface)
+        return false;
+    }
+
+    bool result = attach_plugin_internal(plugin_interface, NULL, plugin_delete_fn);
+    if (result) {
+      plugin_interface->config_updated(config_);
+    }
+
+    return result;
+  }
+
+  /** Detach plugin from logger */
+  bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin) {
+    if (!plugin_interface)
+      return false;
+
+    int plugin_type = plugin_interface->plugin_type();
+    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
+      return false;
+
+    bool result = false;
+
+    for (std::list<plugin_data>::iterator it = plugins_.at(plugin_type).begin(); it != plugins_.at(plugin_type).end(); it++) {
+      if (it->plugin_ != plugin_interface)
+        continue;
+
+      it->plugin_->detach(this);
+
+      if (delete_plugin) {
+        if (it->factory_)
+          it->factory_->destroy(it->plugin_);
+        else if (it->plugin_delete_fn_)
+          it->plugin_delete_fn_(this, it->plugin_);
+      }
+
+      plugins_.at(plugin_type).erase(it);
+      result = true;
+      break;
+    }
+
+    return result;
+  }
+
+  bool is_plugin_attached(const char* type, const char* name) const {
+    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
+      for (std::list<plugin_data>::const_iterator it = plugins_.at(i).begin(); it != plugins_.at(i).end(); it++) {
+        if (type && !str::compare(it->plugin_->type(), type))
+          continue;
+
+        if (name && !str::compare(it->plugin_->name(), name))
+          continue;
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+
+protected:
+  bool attach_plugin_internal(logger_plugin_interface* plugin_interface, 
+    logger_plugin_factory_interface* plugin_factory,
+    void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
+
+    plugin_data attached_plugin;
+    attached_plugin.plugin_ = plugin_interface;
+    attached_plugin.factory_ = plugin_factory;
+    attached_plugin.plugin_delete_fn_ = plugin_delete_fn;
+
+    if (plugin_interface->plugin_type() < kLogPluginTypeMin || plugin_interface->plugin_type() > kLogPluginTypeMax)
+      return false;
+
+    if (!plugin_interface->attach(this))
+      return false;
+
+    plugins_.at(plugin_interface->plugin_type()).push_back(attached_plugin);
+
+    // register plugin as command
+    if (plugin_interface->plugin_type() == kLogPluginTypeCommand) {
+      logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(plugin_interface);
+      if (cmd_plugin) {
+        register_command_plugin<logger_command_plugin_interface>(cmd_plugin);
+      }
+    }
+
+    if (plugin_interface->plugin_type() == kLogPluginTypeArgsCommand) {
+      logger_args_command_plugin_interface* cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(plugin_interface);
+      if (cmd_plugin) {
+        register_command_plugin<logger_args_command_plugin_interface>(cmd_plugin);
+      }
+    }
+
+    return true;
+  }
+
+  template<typename TPlug>
+  struct find_plugin_type : std::unary_function<TPlug*, bool> {
+    std::string type_;
+    find_plugin_type(const std::string& type) :type_(type) { }
+    bool operator()(TPlug* const& obj) const {
+      return str::compare(type_.c_str(), obj->type());
+    }
+  };
+
+private:
+  struct plugin_data {
+    logger_plugin_interface* plugin_;
+    logger_plugin_factory_interface* factory_;
+    void(*plugin_delete_fn_)(logger_interface*, logger_plugin_interface*);
+    plugin_data() : plugin_(NULL), factory_(NULL), plugin_delete_fn_(NULL) {}
+  };
+
+  std::map<int, std::list<plugin_data> > plugins_;
+  std::list<logger_plugin_factory_interface*> plugins_factories_;
+
+
+};
+
 
 /**
  * \class   Logger main class
  */
 class logger : public logger_interface {
  private:
-  struct plugin_data {
-    logger_plugin_interface* plugin_;
-    logger_plugin_factory_interface* factory_;
-    void(*plugin_delete_fn_)(logger_interface*,logger_plugin_interface*);
-    plugin_data() : plugin_(NULL), factory_(NULL), plugin_delete_fn_(NULL) {}
-  };
 
   struct log_config {
     bool process_macro_in_log_text_;
@@ -510,8 +693,6 @@ class logger : public logger_interface {
   };
 
   log_config log_config_;
-  std::map<int, std::list<plugin_data> > plugins_;
-  std::list<logger_plugin_factory_interface*> plugins_factories_;
 
   std::map<int, logger_plugin_interface*> cmd_refs_;
 
@@ -741,14 +922,6 @@ private:
     return val;
   }
 
-  template<typename TPlug>
-  struct find_plugin_type : std::unary_function<TPlug*, bool> {
-    std::string type_;
-    find_plugin_type(const std::string& type) :type_(type) { }
-    bool operator()(TPlug* const& obj) const {
-      return str::compare(type_.c_str(), obj->type());
-    }
-  };
 
   template<typename TCmdPlugin>
   void register_command_plugin(TCmdPlugin* cmd_plugin) {
@@ -768,71 +941,7 @@ private:
     }
   }
 
-  bool attach_plugin_internal(logger_plugin_interface* plugin_interface, logger_plugin_factory_interface* plugin_factory,
-    void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
 
-    plugin_data attached_plugin;
-    attached_plugin.plugin_ = plugin_interface;
-    attached_plugin.factory_ = plugin_factory;
-    attached_plugin.plugin_delete_fn_ = plugin_delete_fn;
-
-    if (plugin_interface->plugin_type() < kLogPluginTypeMin || plugin_interface->plugin_type() > kLogPluginTypeMax)
-      return false;
-
-    if (!plugin_interface->attach(this))
-      return false;
-
-    plugins_.at(plugin_interface->plugin_type()).push_back(attached_plugin);
-
-    // register plugin as command
-    if (plugin_interface->plugin_type() == kLogPluginTypeCommand) {
-      logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(plugin_interface);
-      if (cmd_plugin) {
-        register_command_plugin<logger_command_plugin_interface>(cmd_plugin);
-      }
-    }
-
-    if (plugin_interface->plugin_type() == kLogPluginTypeArgsCommand) {
-      logger_args_command_plugin_interface* cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(plugin_interface);
-      if (cmd_plugin) {
-        register_command_plugin<logger_args_command_plugin_interface>(cmd_plugin);
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * \brief    Create new plugin instance from factory and attach it
-   * \param    type    Plugin type name
-   * \param    name    Instance name
-   * \return   true - plugin successfully created and attached,
-   *           false - plugin was not attached, reasons may be: plugin with same type and name already attached, plugin factory was not found for specified type,
-   *                   plugin factory cannot create plugin object, plugin created but cannot be attached
-   */
-  bool create_and_attach_plugin_from_factory(const std::string& type, const std::string& name) {
-    if (is_plugin_attached(type.c_str(), name.c_str()))
-      return false;
-
-    std::list<logger_plugin_factory_interface*>::const_iterator it =
-      std::find_if(plugins_factories_.begin(), plugins_factories_.end(), find_plugin_type<logger_plugin_factory_interface>(type));
-
-    if (it == plugins_factories_.end())
-      return false;
-
-    logger_plugin_interface* plugin_interface = (*it)->create(name.c_str());
-    if (!plugin_interface)
-      return false;
-
-    bool result = attach_plugin_internal(plugin_interface, *it, NULL);
-    if (result)
-      plugin_interface->config_updated(config_);
-    else {
-      (*it)->destroy(plugin_interface);
-    }
-
-    return result;
-  }
 
  public:
   int ref() { 
@@ -908,76 +1017,6 @@ private:
 #endif  // LOG_MULTITHREADED
   }
 
-  /** Add logger output interface */
-  bool attach_plugin(logger_plugin_interface* plugin_interface, void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
-    if (!plugin_interface)
-      return false;
-
-    int plugin_type = plugin_interface->plugin_type();
-    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
-      return false;
-
-    // check that plugin was not added already
-    for (std::list<plugin_data>::iterator it = plugins_.at(plugin_type).begin(); it != plugins_.at(plugin_type).end(); it++) {
-      if (it->plugin_ == plugin_interface)
-        return false;
-    }
-
-    bool result = attach_plugin_internal(plugin_interface, NULL, plugin_delete_fn);
-    if (result) {
-      plugin_interface->config_updated(config_);
-    }
-
-    return result;
-  }
-
-  /** Detach plugin from logger */
-  bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin) {
-    if (!plugin_interface)
-      return false;
-
-    int plugin_type = plugin_interface->plugin_type();
-    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
-      return false;
-    
-    bool result = false;
-
-    for (std::list<plugin_data>::iterator it = plugins_.at(plugin_type).begin(); it != plugins_.at(plugin_type).end(); it++) {
-      if (it->plugin_ != plugin_interface)
-        continue;
-
-      it->plugin_->detach(this);
-
-      if (delete_plugin) {
-        if (it->factory_)
-          it->factory_->destroy(it->plugin_);
-        else if (it->plugin_delete_fn_)
-          it->plugin_delete_fn_(this, it->plugin_);
-      }
-
-      plugins_.at(plugin_type).erase(it);
-      result = true;
-      break;
-    }
-
-    return result;
-  }
-
-  bool is_plugin_attached(const char* type, const char* name) const {
-    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
-      for (std::list<plugin_data>::const_iterator it = plugins_.at(i).begin(); it != plugins_.at(i).end(); it++) {
-        if (type && !str::compare(it->plugin_->type(), type))
-          continue;
-
-        if (name && !str::compare(it->plugin_->name(), name))
-          continue;
-
-        return true;
-      }
-    }
-
-    return false;
-  }
 
   log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) {
     return log_stream(this, verb_level, addr, function_name, source_file, line_number);
