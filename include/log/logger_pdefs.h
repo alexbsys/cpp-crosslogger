@@ -27,6 +27,13 @@
 #define LOG_FMT_U64 "%llu"
 #endif  // LOG_COMPILER_MSVC
 
+#ifdef LOG_CPP_X11
+#  define LOG_METHOD_OVERRIDE  override
+#else /*LOG_CPP_X11*/
+#  define LOG_METHOD_OVERRIDE
+#endif /*LOG_CPP_X11*/
+
+
 ////////////////////////////// LOG_SELF_PROC_LINK definition for all platforms START //////////////////////////////
 #if defined(LOG_PLATFORM_LINUX) || defined(LOG_PLATFORM_CYGWIN)
 #define LOG_SELF_PROC_LINK "/proc/self/exe"

@@ -194,10 +194,11 @@ public:
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
     printf("%s %s\n", hdr.c_str(), what.c_str());
   }
+
+
 };
 
 int main(int argc, char* argv[]) {
-
 
 	// enable all logger messgaes
 //	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);

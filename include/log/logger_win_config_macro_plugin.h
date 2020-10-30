@@ -20,15 +20,15 @@ public:
   logger_win_config_macro_plugin(const char* plugin_name = NULL) 
     : plugin_name_(plugin_name ? plugin_name : std::string()) {}
 
-  virtual ~logger_win_config_macro_plugin() {}
+  virtual ~logger_win_config_macro_plugin() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const {
+  const char* type() const LOG_METHOD_OVERRIDE {
     return "win_config_macro";
   }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  virtual bool process(std::string& str) {
+  bool process(std::string& str) LOG_METHOD_OVERRIDE {
     int replaced;
     str = process_config_macro(str, replaced);
     return replaced > 0;
@@ -173,9 +173,8 @@ class logger_win_config_macro_plugin_factory : public logger_plugin_default_fact
 public:
   logger_win_config_macro_plugin_factory()
     : logger_plugin_default_factory<logger_win_config_macro_plugin>("win_config_macro", kLogPluginTypeConfigMacro) {}
-  virtual ~logger_win_config_macro_plugin_factory() {}
+  virtual ~logger_win_config_macro_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
-
 
 }//namespace logging
 

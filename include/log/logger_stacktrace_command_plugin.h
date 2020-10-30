@@ -16,19 +16,19 @@ public:
   const int kStacktraceCommandId = 0x1003;
 
   logger_stacktrace_command_plugin(const char* name = NULL) : plugin_name_(name ? name : "") {}
-  virtual ~logger_stacktrace_command_plugin() {}
+  virtual ~logger_stacktrace_command_plugin() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const { return "stacktrace_cmd"; }
+  const char* type() const LOG_METHOD_OVERRIDE { return "stacktrace_cmd"; }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
     if (max_cmds > 1) {
       out_cmd_ids[0] = kStacktraceCommandId;
     }
   }
 
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+  bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     (void)vparam;
     (void)iparam;
 
@@ -88,7 +88,6 @@ private:
   }
 #endif  // LOG_PLATFORM_WINDOWS
 
-
   std::string plugin_name_;
   std::string config_sym_path_;
 };
@@ -97,11 +96,9 @@ class logger_stacktrace_command_plugin_factory : public logger_plugin_default_fa
 public:
   logger_stacktrace_command_plugin_factory()
     : logger_plugin_default_factory<logger_stacktrace_command_plugin>("stacktrace_cmd", kLogPluginTypeCommand) {}
-  virtual ~logger_stacktrace_command_plugin_factory() {}
+  virtual ~logger_stacktrace_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
 
 }//namespace logging
-
-
 
 #endif /*LOGGER_STACKTRACE_COMMAND_PLUGIN*/

@@ -15,19 +15,19 @@ namespace logging {
     const int kModulesCommandId = 0x1002;
 
     logger_modules_command_plugin(const char* name = NULL) : plugin_name_(name ? name : "") {}
-    virtual ~logger_modules_command_plugin() {}
+    virtual ~logger_modules_command_plugin() LOG_METHOD_OVERRIDE {}
 
-    const char* type() const { return "modules_cmd"; }
+    const char* type() const LOG_METHOD_OVERRIDE { return "modules_cmd"; }
 
-    const char* name() const { return plugin_name_.c_str(); }
+    const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-    void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+    void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
       if (max_cmds > 1) {
         out_cmd_ids[0] = kModulesCommandId;
       }
     }
 
-    virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+    bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
       using namespace detail;
       if (cmd_id != kModulesCommandId)
         return false;

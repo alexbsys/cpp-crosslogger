@@ -99,6 +99,7 @@
 
 #include "logger_interfaces.h"
 
+#include "logger_shared_ptr.hpp"
 
 //#define LOG_SET_VERBOSE_LEVEL(l) logging::configurator.set_verbose_level(l)
 
@@ -485,13 +486,32 @@ struct log_macro_cache_t {
 
 class plugin_manager {
 public:
-
-  plugin_manager() {
-
+  plugin_manager(logger_interface* base) : base_(base) {
+    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
+      plugins_.insert(std::pair<int, std::list<plugin_data> >(i, std::list<plugin_data>()));
+    }
   }
 
   ~plugin_manager() {
+    detach_all_plugins();
+  }
 
+  bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
+    if (!plugin_factory_interface)
+      return false;
+
+    int plugin_type = plugin_factory_interface->plugin_type();
+    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
+      return false;
+
+    plugins_factories_.push_back(plugin_factory_interface);
+
+    return true;
+  }
+
+  bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
+    // TODO: TBD
+    return false;
   }
 
   /**
@@ -502,47 +522,60 @@ public:
   *           false - plugin was not attached, reasons may be: plugin with same type and name already attached, plugin factory was not found for specified type,
   *                   plugin factory cannot create plugin object, plugin created but cannot be attached
   */
-  bool create_and_attach_plugin_from_factory(const std::string& type, const std::string& name) {
+  shared_ptr<logger_plugin_interface> create_and_attach_plugin_from_factory(const std::string& type, const std::string& name) {
     if (is_plugin_attached(type.c_str(), name.c_str()))
-      return false;
+      return shared_ptr<logger_plugin_interface>();
 
     std::list<logger_plugin_factory_interface*>::const_iterator it =
       std::find_if(plugins_factories_.begin(), plugins_factories_.end(), find_plugin_type<logger_plugin_factory_interface>(type));
 
     if (it == plugins_factories_.end())
-      return false;
+      return shared_ptr<logger_plugin_interface>();
 
-    logger_plugin_interface* plugin_interface = (*it)->create(name.c_str());
+    shared_ptr<logger_plugin_interface> plugin_interface = (*it)->create(name.c_str());
     if (!plugin_interface)
-      return false;
+      return shared_ptr<logger_plugin_interface>();
 
-    bool result = attach_plugin_internal(plugin_interface, *it, NULL);
+    bool result = attach_plugin_internal(plugin_interface, *it);
     if (result)
-      plugin_interface->config_updated(config_);
-    else {
-      (*it)->destroy(plugin_interface);
-    }
+      return plugin_interface;
 
-    return result;
+    return shared_ptr<logger_plugin_interface>();
   }
 
+  void get_all_plugin_factories(std::vector<logger_plugin_factory_interface*> plugin_factories) const {
+    plugin_factories.clear();
+    std::copy(plugins_factories_.begin(), plugins_factories_.end(), std::back_inserter(plugin_factories));
+  }
+
+  void get_all_plugins(std::vector<shared_ptr<logger_plugin_interface> >& plugins) const {
+    plugins.clear();
+
+    for (std::map<int, std::list<plugin_data> >::const_iterator it = plugins_.cbegin();
+      it != plugins_.cend(); it++) {
+      for (std::list<plugin_data>::const_iterator plugin_it = it->second.cbegin(); 
+        plugin_it != it->second.cend(); plugin_it++) {
+          if (plugin_it->plugin_)
+            plugins.push_back(plugin_it->plugin_);
+      }
+    }
+  }
 
   template<typename TPlugin>
-  void query_plugins(int plugin_type, std::vector<TPlugin*>& plugins) const {
-
+  void query_plugins(int plugin_type, std::vector<shared_ptr<TPlugin> >& plugins) const {
     plugins.clear();
     plugins.reserve(plugins_.at(plugin_type).size());
 
     for (std::list<plugin_data>::const_iterator it = plugins_.at(plugin_type).cbegin();
       it != plugins_.at(plugin_type).cend(); it++) {
-      TPlugin* plugin = dynamic_cast<TPlugin*>(plugin_);
+      shared_ptr<TPlugin> plugin = dynamic_pointer_cast<TPlugin>(it->plugin_);
       if (plugin)
         plugins.push_back(plugin);
     }
   }
 
   /** Add logger output interface */
-  bool attach_plugin(logger_plugin_interface* plugin_interface, void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
+  bool attach_plugin(shared_ptr<logger_plugin_interface> plugin_interface) {
     if (!plugin_interface)
       return false;
 
@@ -556,16 +589,11 @@ public:
         return false;
     }
 
-    bool result = attach_plugin_internal(plugin_interface, NULL, plugin_delete_fn);
-    if (result) {
-      plugin_interface->config_updated(config_);
-    }
-
-    return result;
+    return attach_plugin_internal(plugin_interface, NULL);
   }
 
   /** Detach plugin from logger */
-  bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin) {
+  bool detach_plugin(shared_ptr<logger_plugin_interface> plugin_interface) {
     if (!plugin_interface)
       return false;
 
@@ -579,21 +607,21 @@ public:
       if (it->plugin_ != plugin_interface)
         continue;
 
-      it->plugin_->detach(this);
-
-      if (delete_plugin) {
-        if (it->factory_)
-          it->factory_->destroy(it->plugin_);
-        else if (it->plugin_delete_fn_)
-          it->plugin_delete_fn_(this, it->plugin_);
-      }
-
+      it->plugin_->detach(base_);
       plugins_.at(plugin_type).erase(it);
       result = true;
       break;
     }
 
     return result;
+  }
+
+  void detach_all_plugins() {
+    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
+      while (plugins_.at(i).size()) {
+        detach_plugin(plugins_.at(i).begin()->plugin_);
+      }
+    }
   }
 
   bool is_plugin_attached(const char* type, const char* name) const {
@@ -614,38 +642,20 @@ public:
 
 
 protected:
-  bool attach_plugin_internal(logger_plugin_interface* plugin_interface, 
-    logger_plugin_factory_interface* plugin_factory,
-    void(*plugin_delete_fn)(logger_interface*, logger_plugin_interface*)) {
+  bool attach_plugin_internal(shared_ptr<logger_plugin_interface> plugin_interface,
+    logger_plugin_factory_interface* plugin_factory) {
 
     plugin_data attached_plugin;
     attached_plugin.plugin_ = plugin_interface;
     attached_plugin.factory_ = plugin_factory;
-    attached_plugin.plugin_delete_fn_ = plugin_delete_fn;
 
     if (plugin_interface->plugin_type() < kLogPluginTypeMin || plugin_interface->plugin_type() > kLogPluginTypeMax)
       return false;
 
-    if (!plugin_interface->attach(this))
+    if (!plugin_interface->attach(base_))
       return false;
 
     plugins_.at(plugin_interface->plugin_type()).push_back(attached_plugin);
-
-    // register plugin as command
-    if (plugin_interface->plugin_type() == kLogPluginTypeCommand) {
-      logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(plugin_interface);
-      if (cmd_plugin) {
-        register_command_plugin<logger_command_plugin_interface>(cmd_plugin);
-      }
-    }
-
-    if (plugin_interface->plugin_type() == kLogPluginTypeArgsCommand) {
-      logger_args_command_plugin_interface* cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(plugin_interface);
-      if (cmd_plugin) {
-        register_command_plugin<logger_args_command_plugin_interface>(cmd_plugin);
-      }
-    }
-
     return true;
   }
 
@@ -660,16 +670,14 @@ protected:
 
 private:
   struct plugin_data {
-    logger_plugin_interface* plugin_;
+    shared_ptr<logger_plugin_interface> plugin_;
     logger_plugin_factory_interface* factory_;
-    void(*plugin_delete_fn_)(logger_interface*, logger_plugin_interface*);
-    plugin_data() : plugin_(NULL), factory_(NULL), plugin_delete_fn_(NULL) {}
+    plugin_data() : plugin_(), factory_(NULL) {}
   };
 
   std::map<int, std::list<plugin_data> > plugins_;
   std::list<logger_plugin_factory_interface*> plugins_factories_;
-
-
+  logger_interface* base_;
 };
 
 
@@ -678,7 +686,6 @@ private:
  */
 class logger : public logger_interface {
  private:
-
   struct log_config {
     bool process_macro_in_log_text_;
     std::string header_format_;
@@ -694,7 +701,9 @@ class logger : public logger_interface {
 
   log_config log_config_;
 
-  std::map<int, logger_plugin_interface*> cmd_refs_;
+  std::map<int, logging::detail::shared_ptr<logger_plugin_interface> > cmd_refs_;
+
+  plugin_manager* plugin_mgr_;
 
   mt::atomic_long_type ref_counter_;
   bool first_write_;
@@ -750,7 +759,9 @@ private:
     
     while (true) {
       std::list<log_record> log_records;
-      std::list<plugin_data> outputs;
+      //std::list<plugin_data> outputs;
+      std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
+
       long mt_terminating;
 
       // mutex locked section
@@ -764,7 +775,9 @@ private:
         // copy all records from log to local and clear log buffer
         std::copy(log->mt_buffer_.begin(), log->mt_buffer_.end(), std::back_inserter(log_records));
         log->mt_buffer_.clear();
-        outputs = log->plugins_[kLogPluginTypeOutput];
+
+        log->plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
+        //outputs = log->plugins_[kLogPluginTypeOutput];
 
         LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
 
@@ -778,23 +791,18 @@ private:
         const log_record& record = *log_records.begin();
 
         // call registered outputs
-        for (std::list<plugin_data>::const_iterator it = outputs.cbegin();
-          it != outputs.cend(); it++) {
-          logger_output_plugin_interface* output_plugin = dynamic_cast<logger_output_plugin_interface*>(it->plugin_);
-          if (output_plugin)
-            output_plugin->write(record.verb_level_, record.hdr_, record.text_);
+        for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
+          it != output_plugins.cend(); it++) {
+          (*it)->write(record.verb_level_, record.hdr_, record.text_);
         }
         log_records.pop_front();
       }
 
       if (mt_terminating) {
-        for (std::list<plugin_data>::const_iterator it = outputs.cbegin();
-          it != outputs.cend(); it++) {
-          logger_output_plugin_interface* output_plugin = dynamic_cast<logger_output_plugin_interface*>(it->plugin_);
-          if (output_plugin) {
-            output_plugin->flush();
-            output_plugin->close();
-          }
+        for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
+          it != output_plugins.cend(); it++) {
+            (*it)->flush();
+            (*it)->close();
         }
 
         break;
@@ -908,11 +916,13 @@ private:
   std::string process_config_macros_value(std::string val) const {
     while (true) {
       bool replaced_some = false;
-      for (std::list<plugin_data>::const_iterator it = plugins_.at(kLogPluginTypeConfigMacro).cbegin();
-        it != plugins_.at(kLogPluginTypeConfigMacro).cend(); it++) {
-        logger_config_macro_plugin_interface* plugin = dynamic_cast<logger_config_macro_plugin_interface*>(it->plugin_);
-        if (plugin)
-          replaced_some |= plugin->process(val);
+
+      std::vector<shared_ptr<logger_config_macro_plugin_interface> > config_macro_plugins;
+      plugin_mgr_->query_plugins<logger_config_macro_plugin_interface>(kLogPluginTypeConfigMacro, config_macro_plugins);
+      
+      for (std::vector<shared_ptr<logger_config_macro_plugin_interface> >::const_iterator it = config_macro_plugins.cbegin();
+        it != config_macro_plugins.cend(); it++) {
+        replaced_some |= (*it)->process(val);
       }
 
       if (!replaced_some)
@@ -924,7 +934,7 @@ private:
 
 
   template<typename TCmdPlugin>
-  void register_command_plugin(TCmdPlugin* cmd_plugin) {
+  void register_command_plugin(logging::detail::shared_ptr<TCmdPlugin> cmd_plugin) {
     const int kMaxCmdsPerPlugin = 32;
 
     int cmd_ids[kMaxCmdsPerPlugin];
@@ -936,11 +946,10 @@ private:
         continue;
 
       if (cmd_refs_.find(cmd_ids[i]) == cmd_refs_.end()) {
-        cmd_refs_.insert(std::make_pair(cmd_ids[i], cmd_plugin));
+        cmd_refs_.insert(std::pair<int, shared_ptr<logger_plugin_interface> >(cmd_ids[i], cmd_plugin));
       }
     }
   }
-
 
 
  public:
@@ -976,20 +985,11 @@ private:
 
 
   bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
-    if (!plugin_factory_interface)
-      return false;
-
-    int plugin_type = plugin_factory_interface->plugin_type();
-    if (plugin_type < kLogPluginTypeMin || plugin_type > kLogPluginTypeMax)
-      return false;
-    
-    plugins_factories_.push_back(plugin_factory_interface);
-
-    return true;
+    return plugin_mgr_->register_plugin_factory(plugin_factory_interface);
   }
 
   bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
-    return false;
+    return plugin_mgr_->unregister_plugin_factory(plugin_factory_interface);
   }
 
 
@@ -1004,12 +1004,13 @@ private:
     }
 #endif  // LOG_MULTITHREADED
 
+    std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
+    plugin_mgr_->query_plugins(kLogPluginTypeOutput, output_plugins);
+
     // flush registered outputs
-    for (std::list<plugin_data>::const_iterator it = plugins_.at(kLogPluginTypeOutput).cbegin();
-      it != plugins_.at(kLogPluginTypeOutput).cend(); it++) {
-      logger_output_plugin_interface* output_plugin = dynamic_cast<logger_output_plugin_interface*>(it->plugin_);
-      if (output_plugin)
-        output_plugin->flush();
+    for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
+      it != output_plugins.cend(); it++) {
+      (*it)->flush();
     }
 
 #if LOG_MULTITHREADED
@@ -1022,7 +1023,13 @@ private:
     return log_stream(this, verb_level, addr, function_name, source_file, line_number);
   }
 
-  unsigned int get_version() const {
+  bool attach_plugin(logger_plugin_interface* plugin_interface) LOG_METHOD_OVERRIDE {
+    shared_ptr<logger_plugin_interface> plugin_ptr(plugin_interface);
+    return plugin_mgr_->attach_plugin(plugin_ptr);
+  }
+
+
+  unsigned int get_version() const LOG_METHOD_OVERRIDE {
     return 0x02010101;
   }
 
@@ -1051,9 +1058,7 @@ private:
     }
 #endif  /*LOG_SHARED*/
 
-    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
-      plugins_.insert(std::pair<int, std::list<plugin_data> >(i, std::list<plugin_data>()));
-    }
+    plugin_mgr_ = new plugin_manager(this);
 
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_INIT(&mt_buffer_lock_, NULL);
@@ -1066,15 +1071,11 @@ private:
     mt::create_event(&buffer_devastated_);
 
 #  ifdef LOG_PLATFORM_WINDOWS
-//    write_event_ = CreateEvent(NULL, FALSE, TRUE, NULL);
-//    buffer_devastated_ = CreateEvent(NULL, FALSE, TRUE, NULL);
 
     DWORD thread_id;
     log_thread_handle_ = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&log_thread_fn,
                                      this, 0, &thread_id);    
 #  else   /*LOG_PLATFORM_WINDOWS*/
-//    pthread_cond_init(&write_event_, NULL);
-//    pthread_cond_init(&buffer_devastated_, NULL);
     pthread_create(&log_thread_handle_, NULL, (void* (*)(void*)) & log_thread_fn, this);
 #  endif  /*LOG_PLATFORM_WINDOWS*/
 #endif  /*LOG_MULTITHREADED*/
@@ -1106,21 +1107,20 @@ private:
 #endif /*LOG_MULTITHREADED*/
 
     // Notify outputs about flush and close
-    for (std::list<plugin_data>::const_iterator it = plugins_.at(kLogPluginTypeOutput).cbegin();
-      it != plugins_.at(kLogPluginTypeOutput).cend(); it++) {
-      logger_output_plugin_interface* output_plugin = dynamic_cast<logger_output_plugin_interface*>(it->plugin_);
-      if (output_plugin) {
-        output_plugin->flush();
-        output_plugin->close();
-      }
+    std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
+    plugin_mgr_->query_plugins(kLogPluginTypeOutput, output_plugins);
+
+
+    for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
+      it != output_plugins.cend(); it++) {
+      (*it)->flush();
+      (*it)->close();
     }
 
-    // detach all plugins
-    for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
-      while (plugins_.at(i).size()) {
-        detach_plugin(plugins_.at(i).begin()->plugin_, true);
-      }
-    }
+    plugin_mgr_->detach_all_plugins();
+
+    delete plugin_mgr_;
+    plugin_mgr_ = NULL;
 
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_DESTROY(&mt_buffer_lock_);
@@ -1137,6 +1137,7 @@ private:
     const std::string kConfigLoadPluginsParamName = "LoadPlugins";
     
     int modules_loaded = 0;
+    std::vector<shared_ptr<logger_plugin_interface> > new_plugins;
 
     // process [logger] LoadPlugins=plugin1 plugin2:name plugin3  values
     std::string load_plugins = cfg::get_logcfg_string(config, kConfigLoggerSectionName, std::string(), kConfigLoadPluginsParamName);
@@ -1156,11 +1157,15 @@ private:
       if (key_name.size() > 1)
         name = key_name[1];
 
-      if (is_plugin_attached(key.c_str(), name.c_str()))
+      if (plugin_mgr_->is_plugin_attached(key.c_str(), name.c_str()))
         continue; // loaded already
 
-      if (create_and_attach_plugin_from_factory(key, name))
+      shared_ptr<logger_plugin_interface> new_plugin = plugin_mgr_->create_and_attach_plugin_from_factory(key, name);
+
+      if (new_plugin) {
+        new_plugins.push_back(new_plugin);
         ++modules_loaded;
+      }
     }
 
     // process [load] section
@@ -1189,11 +1194,37 @@ private:
       }
       else continue; // error
 
-      if (is_plugin_attached(key.c_str(), name.c_str()))
+      if (plugin_mgr_->is_plugin_attached(key.c_str(), name.c_str()))
         continue; // loaded already
 
-      if (create_and_attach_plugin_from_factory(key, name))
+      shared_ptr<logger_plugin_interface> new_plugin = plugin_mgr_->create_and_attach_plugin_from_factory(key, name);
+      if (new_plugin) {
+        new_plugins.push_back(new_plugin);
         ++modules_loaded;
+      }
+    }
+
+    // update config and register all new plugins
+    for (size_t i = 0; i < new_plugins.size(); i++) {
+      shared_ptr<logger_plugin_interface> plugin_interface = new_plugins[i];
+
+      plugin_interface->config_updated(config_);
+
+      // register plugin as command
+      if (plugin_interface->plugin_type() == kLogPluginTypeCommand) {
+        shared_ptr<logger_command_plugin_interface> cmd_plugin = dynamic_pointer_cast<logger_command_plugin_interface>(plugin_interface);
+        if (cmd_plugin) {
+          register_command_plugin<logger_command_plugin_interface>(cmd_plugin);
+        }
+      }
+
+      if (plugin_interface->plugin_type() == kLogPluginTypeArgsCommand) {
+        shared_ptr<logger_args_command_plugin_interface> cmd_plugin = dynamic_pointer_cast<logger_args_command_plugin_interface>(plugin_interface);
+        if (cmd_plugin) {
+          register_command_plugin<logger_args_command_plugin_interface>(cmd_plugin);
+        }
+      }
+
     }
 
     return modules_loaded;
@@ -1211,11 +1242,12 @@ private:
   }
 
   void reload_config_from_plugins() {
-    for (std::list<plugin_data>::const_iterator it = plugins_.at(kLogPluginTypeConfig).cbegin();
-      it != plugins_.at(kLogPluginTypeConfig).cend(); it++) {
-      logger_config_plugin_interface* config_plugin = dynamic_cast<logger_config_plugin_interface*>(it->plugin_);
-      if (config_plugin)
-        config_plugin->reload(config_);
+    std::vector<shared_ptr<logger_config_plugin_interface> > config_plugins;
+    plugin_mgr_->query_plugins<logger_config_plugin_interface>(kLogPluginTypeConfig, config_plugins);
+
+    for (std::vector<shared_ptr<logger_config_plugin_interface> >::const_iterator it = config_plugins.cbegin();
+      it != config_plugins.cend(); it++) {
+        (*it)->reload(config_);
     }
   }
 
@@ -1253,13 +1285,11 @@ private:
     } while (true);
 
     // Notify all plugins that config has been reloaded
-    for (std::map<int, std::list<plugin_data> >::iterator it = plugins_.begin();
-      it != plugins_.end(); it++) {
-      for (std::list<plugin_data>::iterator plugin_it = it->second.begin(); plugin_it != it->second.end(); plugin_it++) {
-        if (plugin_it->plugin_)
-          plugin_it->plugin_->config_updated(config_);
-      }
-    }
+    std::vector<shared_ptr<logger_plugin_interface> > plugins;
+    plugin_mgr_->get_all_plugins(plugins);
+
+    for (size_t i = 0; i < plugins.size(); i++)
+      plugins[i]->config_updated(config_);
   }
 
   void reload_config() {
@@ -1285,27 +1315,24 @@ private:
 
     put_to_stream(verb_level, std::string(), "*** Logger loaded plugins ***");
 
-    for (std::map<int, std::list<plugin_data> >::iterator it = plugins_.begin();
-      it != plugins_.end(); it++) {
-      for (std::list<plugin_data>::iterator plugin_it = it->second.begin(); plugin_it != it->second.end(); plugin_it++) {
-        std::string s;
-        
-        if (plugin_it->plugin_) {
-          s = str::stringformat("Plugin Name: %s, Instance name: %s, Plugin Type: %d, Addr: %.8X, Factory: %.8X, Deleter: %.8X",
-            plugin_it->plugin_->type(), plugin_it->plugin_->name(),
-            plugin_it->plugin_->plugin_type(), plugin_it->plugin_, plugin_it->factory_, plugin_it->plugin_delete_fn_);
-        }
-        else {
-          s = str::stringformat("N/A, Addr: %.8X, Factory: %.8X, Deleter: %.8X", plugin_it->plugin_, plugin_it->factory_, plugin_it->plugin_delete_fn_);
-        }
+    std::vector<shared_ptr<logger_plugin_interface> > plugins;
+    plugin_mgr_->get_all_plugins(plugins);
+    for (size_t i = 0; i < plugins.size(); i++) {
+      shared_ptr<logger_plugin_interface> plugin = plugins[i];
 
-        put_to_stream(verb_level, std::string(), s);
-      }
+      std::string s = str::stringformat("Plugin Name: %s, Instance name: %s, Plugin Type: %d, Addr: %.8X",
+          plugin->type(), plugin->name(),
+          plugin->plugin_type(), plugin.get());
+
+      put_to_stream(verb_level, std::string(), s);
     }
 
     put_to_stream(verb_level, std::string(), "*** Logger plugins factories ***");
 
-    for (std::list<logger_plugin_factory_interface*>::const_iterator it = plugins_factories_.cbegin(); it != plugins_factories_.cend(); it++) {
+    std::vector<logger_plugin_factory_interface*> plugin_factories;
+    plugin_mgr_->get_all_plugin_factories(plugin_factories);
+
+    for (std::vector<logger_plugin_factory_interface*>::const_iterator it = plugin_factories.cbegin(); it != plugin_factories.cend(); it++) {
       std::string s = str::stringformat("Plugin Name: %s, Plugin Type: %d", (*it)->type(), (*it)->plugin_type());
       put_to_stream(verb_level, std::string(), s);
     }
@@ -1325,7 +1352,7 @@ private:
   * \param   ...            Format arguments
   */
   void LOG_CDECL log(int verb_level, void* addr, const char* function_name,
-                     const char* source_file, int line_number, const char* format, ...) {
+                     const char* source_file, int line_number, const char* format, ...) LOG_METHOD_OVERRIDE {
     if (!is_message_enabled(verb_level)) return;
 
     va_list arguments;
@@ -1346,7 +1373,7 @@ private:
    */
   void log_args(int verb_level, void* addr, const char* function_name,
                 const char* src_file, int line_num, const char* format,
-                va_list arguments) {
+                va_list arguments) LOG_METHOD_OVERRIDE {
     if (!is_message_enabled(verb_level)) return;
 
     std::string module_name = try_get_module_name_fast(addr);
@@ -1355,25 +1382,28 @@ private:
                            function_name, line_num, module_name.c_str());
     std::string result;
 
-#if LOG_PROCESS_MACRO_IN_LOG_TEXT
-    std::string text = log_process_macroses_nocache(
+    bool process_macro_in_log_text = log_config_.process_macro_in_log_text_;
+
+    if (process_macro_in_log_text) {
+      std::string text = log_process_macroses_nocache(
         format, verb_level, src_file, function_name, line_num, module_name.c_str());
-    str::format_arguments_list(result, text.c_str(), arguments);
-#else   // LOG_PROCESS_MACRO_IN_LOG_TEXT
-    str::format_arguments_list(result, format, arguments);
-#endif  // LOG_PROCESS_MACRO_IN_LOG_TEXT
+      str::format_arguments_list(result, text.c_str(), arguments);
+    }
+    else {
+      str::format_arguments_list(result, format, arguments);
+    }
 
     put_to_stream(verb_level, header, result);
   }
 
   void log_cmd(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam) {
+    const char* source_file, int line_number, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
 
-    std::map<int, logger_plugin_interface*>::const_iterator cmd_it = cmd_refs_.find(cmd_id);
+    std::map<int, shared_ptr<logger_plugin_interface> >::const_iterator cmd_it = cmd_refs_.find(cmd_id);
     if (cmd_it == cmd_refs_.end())
       return;
 
-    logger_command_plugin_interface* cmd_plugin = dynamic_cast<logger_command_plugin_interface*>(cmd_it->second);
+    shared_ptr<logger_command_plugin_interface> cmd_plugin = dynamic_pointer_cast<logger_command_plugin_interface>(cmd_it->second);
     if (!cmd_plugin)
       return;
 
@@ -1392,11 +1422,11 @@ private:
   void log_cmd_args(int cmd_id, int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number, const void* vparam, int iparam, va_list args) {
 
-    std::map<int, logger_plugin_interface*>::const_iterator cmd_it = cmd_refs_.find(cmd_id);
+    std::map<int, shared_ptr<logger_plugin_interface> >::const_iterator cmd_it = cmd_refs_.find(cmd_id);
     if (cmd_it == cmd_refs_.end())
       return;
 
-    logger_args_command_plugin_interface* args_cmd_plugin = dynamic_cast<logger_args_command_plugin_interface*>(cmd_it->second);
+    shared_ptr<logger_args_command_plugin_interface> args_cmd_plugin = dynamic_pointer_cast<logger_args_command_plugin_interface>(cmd_it->second);
     if (!args_cmd_plugin)
       return;
 
@@ -1414,9 +1444,9 @@ private:
   }
 
   void LOG_CDECL log_cmd_vargs(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, ...) {}
-
-
+    const char* source_file, int line_number, const void* vparam, int iparam, ...) {
+    //TODO: TBD  
+  }
 
 #if !LOG_USE_MODULEDEFINITION
   __inline std::string try_get_module_name_fast(void* ptr) {
@@ -1518,7 +1548,6 @@ private:
       }
 
       cache.cache_lock_.read_unlock();
-
       cache.cache_lock_.write_lock();
 
       if (update_hdr_format) {

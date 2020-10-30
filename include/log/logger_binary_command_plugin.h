@@ -15,17 +15,17 @@ public:
   logger_binary_command_plugin(const char* name = NULL) : plugin_name_(name ? name : "") {}
   virtual ~logger_binary_command_plugin() {}
 
-  const char* type() const { return "binary_cmd"; }
+  const char* type() const LOG_METHOD_OVERRIDE { return "binary_cmd"; }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
     if (max_cmds > 1) {
       out_cmd_ids[0] = kBinaryCommandId;
     }
   }
 
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+  bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     if (cmd_id != kBinaryCommandId)
       return false;
 
@@ -71,10 +71,9 @@ class logger_binary_command_plugin_factory : public logger_plugin_default_factor
 public:
   logger_binary_command_plugin_factory()
     : logger_plugin_default_factory<logger_binary_command_plugin>("binary_cmd", kLogPluginTypeCommand) {}
-  virtual ~logger_binary_command_plugin_factory() {}
+  virtual ~logger_binary_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
 
 }//namespace logging
-
 
 #endif /*LOGGER_BINARY_COMMAND_PLUGIN*/

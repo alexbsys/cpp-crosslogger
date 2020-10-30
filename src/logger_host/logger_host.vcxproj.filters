@@ -119,5 +119,8 @@
     <ClInclude Include="..\..\include\log\logger_mt.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_shared_ptr.hpp">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

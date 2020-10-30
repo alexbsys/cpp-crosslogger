@@ -14,20 +14,20 @@ public:
   const int kExceptionTextCommandId = 0x1009;
 
   logger_exception_command_plugin(const char* name = NULL) : plugin_name_(name ? name : "") {}
-  virtual ~logger_exception_command_plugin() {}
+  virtual ~logger_exception_command_plugin() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const { return "exception_cmd"; }
+  const char* type() const LOG_METHOD_OVERRIDE { return "exception_cmd"; }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
     if (max_cmds < 2)
       return;
     out_cmd_ids[0] = kStdExceptionCommandId;
     out_cmd_ids[1] = kExceptionTextCommandId;
   }
 
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+  bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     std::stringstream sstream;
     bool result = false;
 
@@ -74,7 +74,7 @@ class logger_exception_command_plugin_factory : public logger_plugin_default_fac
 public:
   logger_exception_command_plugin_factory()
     : logger_plugin_default_factory<logger_exception_command_plugin>("exception_cmd", kLogPluginTypeCommand) {}
-  virtual ~logger_exception_command_plugin_factory() {}
+  virtual ~logger_exception_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
 
 }//namespace logging

@@ -16,8 +16,6 @@
 
 #include "logger_userdefs.h"
 
-
-
 namespace logging {
 
 #if LOG_UNHANDLED_EXCEPTIONS
@@ -29,9 +27,6 @@ extern logger_singleton_interface<logger_interface>* _logger;
 
 #if defined(LOG_PLATFORM_WINDOWS)
 class unhandled_exceptions_processor {
-public:
-
-
  private:
   /**
    * \brief    Minidump Windows callback implementation
@@ -301,7 +296,6 @@ static void init_unhandled_exceptions_handler(logger_interface* logger_obj) {
 }
 
 
-
 class logger_crashhandler_command_plugin : public logger_command_plugin_interface {
 public:
   const int kCrashHandlerInstallCommandId = 0x100A;
@@ -311,13 +305,13 @@ public:
   const int kCrashExecutePrivateCommandId = 0x100C;
 
   logger_crashhandler_command_plugin(const char* name = NULL) : plugin_name_(name ? name : ""), logger_(NULL) {}
-  virtual ~logger_crashhandler_command_plugin() {}
+  virtual ~logger_crashhandler_command_plugin() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const { return "crashhandler_cmd"; }
+  const char* type() const LOG_METHOD_OVERRIDE { return "crashhandler_cmd"; }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
     if (max_cmds < 3)
       return;
     out_cmd_ids[0] = kCrashHandlerInstallCommandId;
@@ -325,7 +319,7 @@ public:
     out_cmd_ids[2] = kCrashExecutePrivateCommandId;
   }
 
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+  bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     std::stringstream sstream;
     bool result = false;
 
@@ -349,9 +343,6 @@ public:
   virtual bool attach(logger_interface* logger) { logger_ = logger; return true; }
   virtual void detach(logger_interface* logger) { logger_ = NULL;  }
 
-
-private:
-
 private:
   std::string plugin_name_;
   logger_interface* logger_;
@@ -361,9 +352,8 @@ class logger_crashhandler_command_plugin_factory : public logger_plugin_default_
 public:
   logger_crashhandler_command_plugin_factory()
     : logger_plugin_default_factory<logger_crashhandler_command_plugin>("crashhandler_cmd", kLogPluginTypeCommand) {}
-  virtual ~logger_crashhandler_command_plugin_factory() {}
+  virtual ~logger_crashhandler_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
-
 
 }//namespace logging
 

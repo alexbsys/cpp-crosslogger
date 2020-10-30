@@ -9,10 +9,7 @@
 #include "logger_interfaces.h"
 #include "logger_strutils.h"
 #include "logger_sysinclib.h"
-
-#if LOG_MULTITHREADED
 #include "logger_mt.h"
-#endif  // LOG_MULTITHREADED
 
 #include <sstream>
 #include <map>
@@ -26,13 +23,13 @@ public:
   const int kObjectMonitorDumpCommandId = 0x1012;
 
   logger_objmon_command_plugin(const char* name = NULL) : plugin_name_(name ? name : "") {}
-  virtual ~logger_objmon_command_plugin() {}
+  virtual ~logger_objmon_command_plugin() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const { return "objmon_cmd"; }
+  const char* type() const LOG_METHOD_OVERRIDE { return "objmon_cmd"; }
 
-  const char* name() const { return plugin_name_.c_str(); }
+  const char* name() const LOG_METHOD_OVERRIDE { return plugin_name_.c_str(); }
 
-  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {
+  void get_cmd_ids(int* out_cmd_ids, int max_cmds) const LOG_METHOD_OVERRIDE {
     if (max_cmds > 3) {
       out_cmd_ids[0] = kObjectMonitorRegisterCommandId;
       out_cmd_ids[1] = kObjectMonitorUnregisterCommandId;
@@ -40,7 +37,7 @@ public:
     }
   }
 
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) {
+  bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     std::stringstream ss;
     bool processed = false;
 
@@ -67,14 +64,14 @@ public:
     return processed;
   }
 
-  virtual bool attach(logger_interface* logger) { 
+  virtual bool attach(logger_interface* logger) LOG_METHOD_OVERRIDE {
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_INIT(&mutex_objmon_, NULL);
 #endif  // LOG_MULTITHREADED
     return true;
   }
 
-  virtual void detach(logger_interface* logger) {
+  virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_DESTROY(&mutex_objmon_);
 #endif  // LOG_MULTITHREADED
@@ -125,7 +122,6 @@ protected:
   }
 
   void objmon_dump(std::stringstream& ss) {
-
     lock_objmon();
 
     ss << "*** OBJECT LIST ***" << std::endl;
@@ -143,10 +139,7 @@ protected:
     unlock_objmon();
   }
 
-
-
 private:
-
   struct obj_info_t {
     void* ptr_;
     const char* type_name_;
@@ -154,22 +147,15 @@ private:
 
   std::map<size_t, std::list<obj_info_t> > objmon_objs_;
 
-#if LOG_MULTITHREADED
   LOG_MT_MUTEX mutex_objmon_;
-#endif  // LOG_MULTITHREADED
 
   __inline void lock_objmon() {
-#if LOG_MULTITHREADED
     LOG_MT_MUTEX_LOCK(&mutex_objmon_);
-#endif  // LOG_MULTITHREADED
   }
 
   __inline void unlock_objmon() {
-#if LOG_MULTITHREADED
     LOG_MT_MUTEX_UNLOCK(&mutex_objmon_);
-#endif  // LOG_MULTITHREADED
   }
-
 
   std::string plugin_name_;
 };
@@ -178,7 +164,7 @@ class logger_objmon_command_plugin_factory : public logger_plugin_default_factor
 public:
   logger_objmon_command_plugin_factory()
     : logger_plugin_default_factory<logger_objmon_command_plugin>("objmon_cmd", kLogPluginTypeCommand) {}
-  virtual ~logger_objmon_command_plugin_factory() {}
+  virtual ~logger_objmon_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
 
 }//namespace logging
