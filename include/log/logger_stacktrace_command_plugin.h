@@ -9,6 +9,8 @@
 
 #include <sstream>
 
+#define LOGGER_HAVE_BUILTIN_STACKTRACE_COMMAND_PLUGIN  1
+
 namespace logging {
 
 class logger_stacktrace_command_plugin : public logger_command_plugin_interface {

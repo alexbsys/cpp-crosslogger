@@ -14,6 +14,7 @@
 
 #include <fstream>
 
+#define LOGGER_HAVE_BUILTIN_SCROLL_FILE_OUTPUT_PLUGIN  1
 
 namespace logging {
 

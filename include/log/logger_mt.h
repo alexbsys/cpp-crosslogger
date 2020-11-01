@@ -5,6 +5,7 @@
 #include "logger_config.h"
 #include "logger_pdetect.h"
 #include "logger_pdefs.h"
+#include "logger_sysinclib.h"
 
 #ifdef LOG_CPP_X11
 #include <thread>

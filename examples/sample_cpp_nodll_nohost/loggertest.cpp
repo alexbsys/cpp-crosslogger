@@ -9,6 +9,7 @@
 #include <log/logger_stacktrace_command_plugin.h>
 #include <log/logger_crashhandler_command_plugin.h>
 #include <log/logger_objmon_command_plugin.h>
+#include <log/logger_win_registry_config_plugin.h>
 
 #include <log/logger.h>
 #include <fstream>
@@ -211,6 +212,7 @@ int main(int argc, char* argv[]) {
   logging::_logger->get()->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
   logging::_logger->get()->register_plugin_factory(new logging::logger_crashhandler_command_plugin_factory());
   logging::_logger->get()->register_plugin_factory(new logging::logger_objmon_command_plugin_factory());
+  logging::_logger->get()->register_plugin_factory(new logging::logger_win_registry_config_plugin_factory());
 
 //	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
 //  logging::configurator.set_log_scroll_file_count(6);
@@ -226,9 +228,9 @@ int main(int argc, char* argv[]) {
   logging::_logger->get()->attach_plugin(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
-  logging::_logger->get()->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd");
+  logging::_logger->get()->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config");
   logging::_logger->get()->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
-
+  logging::_logger->get()->set_config_param("logger::RegistryConfigPath", "HKCU\\Software\\Test");
 
   logging::_logger->get()->reload_config();
 

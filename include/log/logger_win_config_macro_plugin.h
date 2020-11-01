@@ -13,6 +13,8 @@
 #include "logger_moddef.h"
 #endif /*LOG_USE_MODULEDEFINITION*/
 
+#define LOGGER_HAVE_BUILTIN_WIN_CONFIG_MACRO_PLUGIN  1
+
 namespace logging {
 
 class logger_win_config_macro_plugin : public logger_config_macro_plugin_interface {

@@ -76,12 +76,6 @@ public:
     return logging::detail::shared_ptr<logger_plugin_interface>(new T(name));
   }
 
-/*  virtual void destroy(logger_plugin_interface* plugin_interface) {
-    if (dynamic_cast<T*>(plugin_interface)) {
-      delete plugin_interface;
-    }
-  }
-  */
 private:
   std::string plugin_type_name_;
   int plugin_type_;
@@ -149,8 +143,6 @@ struct logger_args_command_plugin_interface : public virtual logger_plugin_inter
   }
 };
 
-#define LOG_INTERFACE_SIGNATURE   19011533
-
 /**
 * \struct   logger_interface  interface. User do not need to use it directly, only via
 *           macroses LOG_XXXX because they put function name, source file and line number
@@ -203,18 +195,6 @@ struct logger_interface {
 
   /** Remove logger output interface */
 //  virtual bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin = true) = 0;
-
-#if LOG_USE_OBJMON
-  /** Register object instance */
-//  virtual void log_objmon_register(size_t hash_code, const char* type_name,
-//    void* ptr) = 0;
-
-  /** Unregister object instance */
-//  virtual void log_objmon_unregister(size_t hash_code, void* ptr) = 0;
-
-  /** Dump all registered objects instances */
-//  virtual void log_objmon_dump(int verb_level) = 0;
-#endif  // LOG_USE_OBJMON
 
   virtual int ref() = 0;
   virtual int deref() = 0;
