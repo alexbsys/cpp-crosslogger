@@ -1,4 +1,8 @@
 
+// Logger public declaration part
+// This file must be included from C++
+
+
 #ifndef LOGGER_SINGLETON_HEADER
 #define LOGGER_SINGLETON_HEADER
 
@@ -23,7 +27,7 @@ class singleton : public logger_singleton_interface<_TIf> {
 
   ~singleton() { release(); }
 
-  __inline _TIf* operator->() { return get(); }
+  LOG_INLINE _TIf* operator->() { return get(); }
 
   static void delete_fn(_TIf* obj, void* user_param) {
     delete obj;

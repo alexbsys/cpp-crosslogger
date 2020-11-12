@@ -1,4 +1,6 @@
 
+// Logger public definition
+
 #ifndef LOGGER_STREAM_HEADER
 #define LOGGER_STREAM_HEADER
 

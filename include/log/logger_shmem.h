@@ -1,4 +1,7 @@
 
+// Logger implementation part
+// This file must be included from C++ part
+
 #ifndef LOGGER_SHARED_MEMORY_HEADER
 #define LOGGER_SHARED_MEMORY_HEADER
 

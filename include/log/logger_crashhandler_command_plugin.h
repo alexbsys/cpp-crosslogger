@@ -145,9 +145,12 @@ class unhandled_exceptions_processor {
 
     logger_obj->flush();
 
+    char buf[512];
 
 #if LOG_AUTO_DEBUGGING
-    std::string config_sym_path = logger_obj->get_config_param("runtime_debugging::SymPath");
+    std::string config_sym_path;
+    if (logger_obj->get_config_param("runtime_debugging::SymPath", buf, sizeof(buf)))
+      config_sym_path = buf;
 
     LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "Stack trace:\n%s",
               runtime_debugging::get_stack_trace_string(ex_ptrs->ContextRecord, 0, config_sym_path).c_str());
@@ -156,24 +159,41 @@ class unhandled_exceptions_processor {
 
     int millisec;
     struct tm newtime = utils::get_time(millisec);
-    std::string exit_on_crash_str = logger_obj->get_config_param("crash_dump::ExitAppOnCrash");
+    std::string exit_on_crash_str;
+    if (logger_obj->get_config_param("crash_dump::ExitAppOnCrash", buf, sizeof(buf)))
+      exit_on_crash_str = buf;
+
     bool exit_on_crash = exit_on_crash_str == "1";
 
-    std::string show_message_on_crash_str = logger_obj->get_config_param("crash_dump::ShowMessageOnCrash");
+    std::string show_message_on_crash_str;
+    if (logger_obj->get_config_param("crash_dump::ShowMessageOnCrash", buf, sizeof(buf)))
+      show_message_on_crash_str = buf;
+
     bool show_message_on_crash = show_message_on_crash_str == "1";
 
-    std::string create_dump_file_str = logger_obj->get_config_param("crash_dump::CreateDumpFile");
+    std::string create_dump_file_str;
+    if (logger_obj->get_config_param("crash_dump::CreateDumpFile", buf, sizeof(buf)))
+      create_dump_file_str = buf;
+
     bool create_dump_file = create_dump_file_str != "0";
 
-    std::string path = logger_obj->get_config_param("crash_dump::DumpPath");
+    std::string path;
+    if (logger_obj->get_config_param("crash_dump::DumpPath", buf, sizeof(buf)))
+      path = buf;
+
     if (!path.size())
       path = ".";
 
-    std::string file_name = logger_obj->get_config_param("crash_dump::DumpName");
+    std::string file_name;
+    if (logger_obj->get_config_param("crash_dump::DumpName", buf, sizeof(buf)))
+      file_name = buf;
+
     if (!file_name.size())
       file_name = "crashdump";
 
-    std::string create_dir = logger_obj->get_config_param("crash_dump::CreateDumpDirectory");
+    std::string create_dir;
+    if (logger_obj->get_config_param("crash_dump::CreateDumpDirectory", buf, sizeof(buf)))
+      create_dir = buf;
     
     if (create_dump_file) {
       if (create_dir.size() && atoi(create_dir.c_str())) {
@@ -206,7 +226,10 @@ class unhandled_exceptions_processor {
       }
     }
 
-    std::string addr_str = logger_obj->get_config_param("crash_dump::PreviousExceptionFilterAddress");
+    std::string addr_str;
+    if (logger_obj->get_config_param("crash_dump::PreviousExceptionFilterAddress", buf, sizeof(buf)))
+      addr_str = buf;
+
     long long addr = atoll(addr_str.c_str());
     uint64_t addr64 = addr < 0 ? (-addr + 0x8000000000000000ULL) : addr;
     void * prev_exception_filter = reinterpret_cast<void*>(addr64);

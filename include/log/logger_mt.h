@@ -1,4 +1,7 @@
 
+// Logger implementation part
+// This file must be included from C++
+
 #ifndef LOGGER_MULTITHREAD_HEADER
 #define LOGGER_MULTITHREAD_HEADER
 
@@ -164,6 +167,8 @@ static bool atomic_compare_exchange(long volatile* variable, long new_val, long 
 #define LOG_MT_MUTEX_UNLOCK(x) LeaveCriticalSection(x)
 #define LOG_MT_MUTEX_DESTROY(x) DeleteCriticalSection(x)
 #define LOG_MT_THREAD_EXIT(x) ExitThread(x)
+
+#define LOG_MT_THREAD_FN_TYPE  LPTHREAD_START_ROUTINE
 #else  // LOG_PLATFORM_WINDOWS
 
 #define LOG_MT_EVENT_TYPE pthread_cond_t
@@ -175,6 +180,8 @@ static bool atomic_compare_exchange(long volatile* variable, long new_val, long 
 #define LOG_MT_MUTEX_UNLOCK pthread_mutex_unlock
 #define LOG_MT_MUTEX_DESTROY pthread_mutex_destroy
 #define LOG_MT_THREAD_EXIT pthread_exit
+
+typedef void* (*LOG_MT_THREAD_FN_TYPE)(void*);
 
 #endif  // LOG_PLATFORM_WINDOWS
 
@@ -217,6 +224,20 @@ static void yield() {
 #else
   // ??? do nothing
 #endif
+}
+
+static LOG_MT_THREAD_HANDLE_TYPE thread_start(LOG_MT_THREAD_FN_TYPE thread_fn, void* thread_param) {
+  LOG_MT_THREAD_HANDLE_TYPE thread_handle = NULL;
+
+#ifdef LOG_PLATFORM_WINDOWS
+  DWORD thread_id;
+  thread_handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_fn,
+    thread_param, 0, &thread_id);
+#else   /*LOG_PLATFORM_WINDOWS*/
+  pthread_create(&thread_handle, NULL, (void* (*)(void*))thread_fn, thread_param);
+#endif  /*LOG_PLATFORM_WINDOWS*/
+
+  return thread_handle;
 }
 
 static void thread_join(LOG_MT_THREAD_HANDLE_TYPE* handle) {
@@ -265,6 +286,19 @@ static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mute
 #endif  // LOG_PLATFORM_WINDOWS
 }
 
+class mutex_scope_lock {
+public:
+  mutex_scope_lock(LOG_MT_MUTEX* mutex) : mutex_(mutex) {
+    LOG_MT_MUTEX_LOCK(mutex_);
+  }
+
+  ~mutex_scope_lock() {
+    LOG_MT_MUTEX_UNLOCK(mutex_);
+  }
+
+private:
+  LOG_MT_MUTEX* mutex_;
+};
 
 class read_write_spinlock {
 public:

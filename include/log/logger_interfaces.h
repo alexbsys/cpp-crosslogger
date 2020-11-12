@@ -19,21 +19,35 @@ struct logger_interface;
 
 enum log_plugin_type {
   kLogPluginTypeInvalid = 0,
-  kLogPluginTypeOutput = 1,
-  kLogPluginTypeConfigMacro = 2,
-  kLogPluginTypeConfig = 3,
-  kLogPluginTypeHeaderMacro = 4,
-  kLogPluginTypeCommand = 5,
-  kLogPluginTypeArgsCommand = 6,
+
+  /* Behavior plugin extends nothing. It can be used for additional registrations, default configurations, etc */
+  kLogPluginTypeBehavior = 1,
+
+  /* Output logger plugin: file, stdout, database, etc */
+  kLogPluginTypeOutput = 2,
+
+  /* Configuration macro extensions. Can provide own implemented macro processing in configuration, like $(BOOT_DIRECTORY) */
+  kLogPluginTypeConfigMacro = 3,
+
+  kLogPluginTypeConfig = 4,
+
+  /* Header macro */
+  kLogPluginTypeHeaderMacro = 5,
+  
+  /* Commands extension. Provide own command code which can be called with LOG_CMD( cmdid ) */
+  kLogPluginTypeCommand = 6,
+
+  /* Commands extension with variable arguments */
+  kLogPluginTypeArgsCommand = 7,
 
   kLogPluginTypeMin = 1,
-  kLogPluginTypeMax = 6
+  kLogPluginTypeMax = 7
 };
 
 struct logger_plugin_interface {
   virtual ~logger_plugin_interface() {}
 
-  virtual int plugin_type() const { return kLogPluginTypeInvalid; }
+  virtual int plugin_type() const { return kLogPluginTypeBehavior; }
   virtual const char* type() const { return ""; }
   virtual const char* name() const { return ""; }
   virtual const char* deps() const { return ""; }
@@ -45,10 +59,6 @@ struct logger_plugin_interface {
 
   virtual bool attach(logger_interface* logger) { return true; }
   virtual void detach(logger_interface* logger) {}
-
-//  virtual long ref() = 0;
-//  virtual long unref() = 0;
-//  virtual long refcount() const = 0;
 };
 
 struct logger_plugin_factory_interface {
@@ -154,7 +164,7 @@ struct logger_interface {
   virtual ~logger_interface() {}
 
   virtual void set_config_param(const char* key, const char* value) = 0;
-  virtual const char* get_config_param(const char* key) const = 0;
+  virtual int get_config_param(const char* key, char* buffer, int buffer_size) const = 0;
 
   /** Log format, like printf to log */
   virtual void LOG_CDECL log(int verb_level, void* addr, const char* function_name,
@@ -190,11 +200,11 @@ struct logger_interface {
   virtual bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
   virtual bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
 
-  /** Add logger output interface */
+  /** Add plugin instance manually */
   virtual bool attach_plugin(logger_plugin_interface* plugin_interface) = 0;
 
-  /** Remove logger output interface */
-//  virtual bool detach_plugin(logger_plugin_interface* plugin_interface, bool delete_plugin = true) = 0;
+  /** Detach plugin instance manually */
+  virtual bool detach_plugin(logger_plugin_interface* plugin_interface) = 0;
 
   virtual int ref() = 0;
   virtual int deref() = 0;
@@ -209,9 +219,8 @@ public:
   virtual void reset(_TIf* ptr, bool need_delete = true) = 0;
   virtual void release() = 0;
 
-  __inline _TIf* operator->() { return get(); }
+  LOG_INLINE _TIf* operator->() { return get(); }
 };
-
 
 }//namespace logging
 

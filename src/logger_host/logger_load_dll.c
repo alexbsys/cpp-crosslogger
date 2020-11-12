@@ -45,122 +45,140 @@ void* __logger_dll_handle = NULL;
 int __logger_try_load = 0;
 
 int LOG_CDECL logger_load_dll();
-/*
-void LOG_CDECL __c_logger_log_modules_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line) 
-{ 
+
+void LOG_CDECL __c_logger_log_args_dummy(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file,
+  int line, const char* format, va_list args) {
 	if (logger_load_dll())
-		__c_logger_log_modules(verbose_level, caller_addr, function, file, line);
+		__c_logger_log_args(logobj, verbose_level, caller_addr, function, file, line, format, args);
 }
 
-void LOG_CDECL __c_logger_log_stack_trace_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line) 
-{ 
-	if (logger_load_dll()) 
-		__c_logger_log_stack_trace(verbose_level, caller_addr, function, file, line);
-}
-*/
-void LOG_CDECL __c_logger_log_args_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) 
-{
-	if (logger_load_dll())
-		__c_logger_log_args(verbose_level, caller_addr, function, file, line, format, args);
-}
-
-void LOG_CDECL __c_logger_log_dummy(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) 
-{
+void LOG_CDECL __c_logger_log_dummy(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file,
+  int line, const char* format, ...) {
 	va_list arguments;
 	va_start(arguments, format);
 
 	if (logger_load_dll())
-		__c_logger_log_args(verbose_level, caller_addr, function, file, line, format, arguments);
+		__c_logger_log_args(logobj, verbose_level, caller_addr, function, file, line, format, arguments);
 
 	va_end(arguments);
 }
 
-void LOG_CDECL __c_logger_log_cmd_dummy(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) 
-{ 
+void LOG_CDECL __c_logger_log_cmd_dummy(void* logobj, int cmd_id, int verbose_level, void* caller_addr, 
+  const char* function, const char* file, int line, const void* vparam, int iparam) { 
 	if (logger_load_dll() && __c_logger_log_cmd != __c_logger_log_cmd_dummy)
-		__c_logger_log_cmd(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam);
+		__c_logger_log_cmd(logobj, cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam);
 }
 
-void LOG_CDECL __c_logger_log_cmd_args_dummy(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args)
-{
+void LOG_CDECL __c_logger_log_cmd_args_dummy(void* logobj, int cmd_id, int verbose_level, void* caller_addr, 
+  const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) {
   if (logger_load_dll() && __c_logger_log_cmd_args != __c_logger_log_cmd_args_dummy)
-    __c_logger_log_cmd_args(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
-}
-/*
-void LOG_CDECL __c_logger_objmon_register_dummy(size_t hash_code, const char* type_name, void* ptr) {
-  if (logger_load_dll() && __c_logger_objmon_register != __c_logger_objmon_register_dummy)
-    __c_logger_objmon_register(hash_code, type_name, ptr);
+    __c_logger_log_cmd_args(logobj, cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
 }
 
-void LOG_CDECL __c_logger_objmon_unregister_dummy(size_t hash_code, void* ptr) {
-  if (logger_load_dll() && __c_logger_objmon_unregister != __c_logger_objmon_unregister_dummy)
-    __c_logger_objmon_unregister(hash_code, ptr);
-}
-
-void LOG_CDECL __c_logger_objmon_dump_dummy(int verbose_level) {
-  if (logger_load_dll() && __c_logger_objmon_dump != __c_logger_objmon_dump_dummy)
-    __c_logger_objmon_dump(verbose_level);
-}
-*/
-void LOG_CDECL __c_logger_set_current_thread_name_dummy(const char* thread_name) {
+void LOG_CDECL __c_logger_set_current_thread_name_dummy(void* logobj, const char* thread_name) {
   if (logger_load_dll() && __c_logger_set_current_thread_name != __c_logger_set_current_thread_name_dummy)
-    __c_logger_set_current_thread_name(thread_name);
+    __c_logger_set_current_thread_name(logobj, thread_name);
 }
 
-void LOG_CDECL __c_logger_set_config_param_dummy(const char* key, const char* value) {
+void LOG_CDECL __c_logger_set_config_param_dummy(void* logobj, const char* key, const char* value) {
   if (logger_load_dll() && __c_logger_set_config_param != __c_logger_set_config_param_dummy)
-    __c_logger_set_config_param(key, value);
+    __c_logger_set_config_param(logobj, key, value);
 }
 
-int LOG_CDECL __c_logger_get_config_param_dummy(const char* key, char* value, int buffer_size) {
+int LOG_CDECL __c_logger_get_config_param_dummy(void* logobj, const char* key, char* value, int buffer_size) {
   if (logger_load_dll() && __c_logger_get_config_param != __c_logger_get_config_param_dummy)
-    return __c_logger_get_config_param(key, value, buffer_size);
+    return __c_logger_get_config_param(logobj, key, value, buffer_size);
 
   return 0;
 }
 
+void LOG_CDECL __c_logger_reload_config_dummy(void* logobj) {
+  if (logger_load_dll() && __c_logger_reload_config != __c_logger_reload_config_dummy)
+    __c_logger_reload_config(logobj);
+}
 
-//void (LOG_CDECL *__c_logger_log_modules)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_modules_dummy;
-//void (LOG_CDECL * __c_logger_log_stack_trace)(int verbose_level, void* caller_addr, const char* function, const char* file, int line) = &__c_logger_log_stack_trace_dummy;
-void (LOG_CDECL *__c_logger_log)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) = &__c_logger_log_dummy;
-void (LOG_CDECL *__c_logger_log_args)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) = &__c_logger_log_args_dummy;
-//void (LOG_CDECL *__c_logger_log_binary)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len) = &__c_logger_log_binary_dummy;
-void (LOG_CDECL *__c_logger_log_cmd)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) = &__c_logger_log_cmd_dummy;
-void (LOG_CDECL *__c_logger_log_cmd_args)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) = &__c_logger_log_cmd_args_dummy;
+void LOG_CDECL __c_logger_dump_state_dummy(void* logobj, int verbose_level) {
+  if (logger_load_dll() && __c_logger_dump_state != __c_logger_dump_state_dummy)
+    __c_logger_dump_state(logobj, verbose_level);
+}
 
-//void (LOG_CDECL *__c_logger_objmon_register)(size_t hash_code, const char* type_name, void* ptr) = &__c_logger_objmon_register_dummy;
-//void (LOG_CDECL *__c_logger_objmon_unregister)(size_t hash_code, void* ptr) = &__c_logger_objmon_unregister_dummy;
-//void (LOG_CDECL *__c_logger_objmon_dump)(int verbose_level) = &__c_logger_objmon_dump_dummy;
+int LOG_CDECL __c_logger_register_plugin_factory_dummy(void* logobj, void* factory_interface) {
+  if (logger_load_dll() && __c_logger_register_plugin_factory != __c_logger_register_plugin_factory_dummy)
+    return __c_logger_register_plugin_factory(logobj, factory_interface);
 
-void (LOG_CDECL *__c_logger_set_current_thread_name)(const char* thread_name) = &__c_logger_set_current_thread_name_dummy;
+  return 0;
+}
 
-void (LOG_CDECL *__c_logger_set_config_param)(const char* key, const char* value) = &__c_logger_set_config_param_dummy;
-int (LOG_CDECL *__c_logger_get_config_param)(const char* key, char* value, int buffer_size) = &__c_logger_get_config_param_dummy;
+int LOG_CDECL __c_logger_unregister_plugin_factory_dummy(void* logobj, void* factory_interface) {
+  if (logger_load_dll() && __c_logger_unregister_plugin_factory != __c_logger_unregister_plugin_factory_dummy)
+    return __c_logger_unregister_plugin_factory(logobj, factory_interface);
 
+  return 0;
+}
+
+int LOG_CDECL __c_logger_attach_plugin_dummy(void* logobj, void* plugin_interface) {
+  if (logger_load_dll() && __c_logger_attach_plugin != __c_logger_attach_plugin_dummy)
+    return __c_logger_attach_plugin(logobj, plugin_interface);
+
+  return 0;
+}
+
+int LOG_CDECL __c_logger_detach_plugin_dummy(void* logobj, void* plugin_interface) {
+  if (logger_load_dll() && __c_logger_detach_plugin != __c_logger_detach_plugin_dummy)
+    return __c_logger_detach_plugin(logobj, plugin_interface);
+
+  return 0;
+}
+
+void LOG_CDECL __c_logger_flush_dummy(void* logobj) {
+  if (logger_load_dll() && __c_logger_flush != __c_logger_flush_dummy)
+    __c_logger_flush(logobj);
+}
+
+unsigned int LOG_CDECL c_logger_get_version_dummy(void* logobj) {
+  if (logger_load_dll() && c_logger_get_version != c_logger_get_version_dummy)
+    return c_logger_get_version(logobj);
+
+  return 0;
+}
+
+void (LOG_CDECL *__c_logger_log)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) = &__c_logger_log_dummy;
+void (LOG_CDECL *__c_logger_log_args)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) = &__c_logger_log_args_dummy;
+void (LOG_CDECL *__c_logger_log_cmd)(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) = &__c_logger_log_cmd_dummy;
+void (LOG_CDECL *__c_logger_log_cmd_args)(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) = &__c_logger_log_cmd_args_dummy;
+void (LOG_CDECL *__c_logger_set_current_thread_name)(void* logobj, const char* thread_name) = &__c_logger_set_current_thread_name_dummy;
+void (LOG_CDECL *__c_logger_set_config_param)(void* logobj, const char* key, const char* value) = &__c_logger_set_config_param_dummy;
+int (LOG_CDECL *__c_logger_get_config_param)(void* logobj, const char* key, char* value, int buffer_size) = &__c_logger_get_config_param_dummy;
+void(LOG_CDECL* __c_logger_reload_config)(void* logobj);
+void(LOG_CDECL* __c_logger_dump_state)(void* logobj, int verbose_level);
+int(LOG_CDECL* __c_logger_register_plugin_factory)(void* logobj, void* factory_interface);
+int(LOG_CDECL* __c_logger_unregister_plugin_factory)(void* logobj, void* factory_interface);
+int(LOG_CDECL* __c_logger_attach_plugin)(void* logobj, void* plugin_interface);
+int(LOG_CDECL* __c_logger_detach_plugin)(void* logobj, void* plugin_interface);
+void(LOG_CDECL* __c_logger_flush)(void* logobj);
+unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj);
 
 void logger_restore_dummies()
 {
-//	__c_logger_log_modules = &__c_logger_log_modules_dummy;
-//	__c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
 	__c_logger_log = &__c_logger_log_dummy;
-//	__c_logger_log_binary = &__c_logger_log_binary_dummy;
 	__c_logger_log_args = &__c_logger_log_args_dummy;
 
   __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
   __c_logger_log_cmd_args = &__c_logger_log_cmd_args_dummy;
 
-//  __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
-//  __c_logger_objmon_unregister = &__c_logger_objmon_unregister_dummy;
-//  __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
-
   __c_logger_set_current_thread_name = &__c_logger_set_current_thread_name_dummy;
   __c_logger_set_config_param = &__c_logger_set_config_param_dummy;
   __c_logger_get_config_param = &__c_logger_get_config_param_dummy;
+  __c_logger_reload_config = &__c_logger_reload_config_dummy;
+  __c_logger_dump_state = &__c_logger_dump_state_dummy;
+  __c_logger_register_plugin_factory = &__c_logger_register_plugin_factory_dummy;
+  __c_logger_unregister_plugin_factory = &__c_logger_unregister_plugin_factory_dummy;
+  __c_logger_attach_plugin = &__c_logger_attach_plugin_dummy;
+  __c_logger_detach_plugin = &__c_logger_detach_plugin_dummy;
+  __c_logger_flush = &__c_logger_flush_dummy;
+  c_logger_get_version = &c_logger_get_version_dummy;
 
-//  __c_logger_set_verbose_level = &__c_logger_set_verbose_level_dummy;
-
-	if (__logger_dll_handle)
-	{
+	if (__logger_dll_handle) {
 #ifdef LOG_PLATFORM_WINDOWS
 		FreeLibrary(__logger_dll_handle);
 #else //LOG_PLATFORM_WINDOWS
@@ -193,8 +211,60 @@ void logger_restore_dummies()
 #endif //LOG_PLATFORM_WINDOWS
 
 
-int LOG_CDECL logger_load_dll()
-{
+int LOG_CDECL logger_is_dll_loaded() {
+  return !!__logger_dll_handle;
+}
+
+int LOG_CDECL logger_load_dll_functions(void* logger_dll_handle) {
+  __c_logger_log_args = (void (LOG_CDECL *)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_log_args");
+
+  __c_logger_log = (void (LOG_CDECL *)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_log");
+
+  __c_logger_log_cmd = (void (LOG_CDECL *)(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_log_cmd");
+
+  __c_logger_log_cmd_args = (void (LOG_CDECL *)(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_log_cmd_args");
+
+  __c_logger_set_current_thread_name = (void(LOG_CDECL*)(void* logobj, const char*))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_set_current_thread_name");
+
+  __c_logger_set_config_param = (void(LOG_CDECL*)(void* logobj, const char*, const char*))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_set_config_param");
+
+  __c_logger_get_config_param = (int(LOG_CDECL*)(void* logobj, const char*, char*, int))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_get_config_param");
+
+  __c_logger_reload_config = (void(LOG_CDECL*)(void* logobj))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_reload_config");
+
+  __c_logger_dump_state = (void(LOG_CDECL*)(void* logobj, int verbose_level))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_dump_state");
+
+  __c_logger_register_plugin_factory = (int(LOG_CDECL*)(void* logobj, void* factory_interface))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_register_plugin_factory");
+
+  __c_logger_unregister_plugin_factory = (int(LOG_CDECL*)(void* logobj, void* factory_interface))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_unregister_plugin_factory");
+
+  __c_logger_attach_plugin = (int(LOG_CDECL*)(void* logobj, void* plugin_interface))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_attach_plugin");
+
+  __c_logger_detach_plugin = (int(LOG_CDECL*)(void* logobj, void* plugin_interface))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_detach_plugin");
+
+  __c_logger_flush = (void(LOG_CDECL*)(void* logobj))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_flush");
+
+  c_logger_get_version = (unsigned int(LOG_CDECL*)(void* logobj))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_get_version");
+
+  return 1;
+}
+
+int LOG_CDECL logger_load_dll() {
 #ifndef LOG_PLATFORM_WINDOWS
     char libpath[512];
     int pos;
@@ -252,66 +322,13 @@ int LOG_CDECL logger_load_dll()
   if (!__logger_dll_handle)
     return 0;
 
-  __c_logger_log_args = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_args");
-	
-  __c_logger_log = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log");
+  logger_load_dll_functions(__logger_dll_handle);
 
-//  __c_logger_log_binary = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* data, int len))
-//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_binary");
-
-  __c_logger_log_cmd = (void (LOG_CDECL *)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_cmd");
-
-  __c_logger_log_cmd_args = (void (LOG_CDECL *)(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_cmd_args");
-
-//  __c_logger_log_modules = (void (LOG_CDECL *)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
-//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_modules");
-
-//  __c_logger_log_stack_trace = (void (LOG_CDECL*)(int verbose_level, void* caller_addr, const char* function, const char* file, int line))
-//    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_log_stack_trace");
-
-  __c_logger_objmon_register = (void (LOG_CDECL*)(size_t, const char*, void*))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_objmon_register");
-
-  __c_logger_objmon_unregister = (void (LOG_CDECL*)(size_t, void*))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_objmon_unregister");
-
-  __c_logger_objmon_dump = (void (LOG_CDECL*)(int))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_objmon_dump");
-
-  __c_logger_set_current_thread_name = (void(LOG_CDECL*)(const char*))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_set_current_thread_name");
-
-  __c_logger_set_config_param = (void(LOG_CDECL*)(const char*, const char*))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_set_config_param");
-
-  __c_logger_get_config_param = (int(LOG_CDECL*)(const char*, char*, int))
-    LOG_GET_PROC_ADDRESS(__logger_dll_handle, "__c_logger_get_config_param");
-
-/*  if (!__c_logger_objmon_register)
-    __c_logger_objmon_register = &__c_logger_objmon_register_dummy;
-
-  if (!__c_logger_objmon_unregister)
-    __c_logger_objmon_unregister = &__c_logger_objmon_unregister_dummy;
-
-  if (!__c_logger_objmon_dump)
-    __c_logger_objmon_dump = &__c_logger_objmon_dump_dummy;
-*/
   if (!__c_logger_log_cmd)
     __c_logger_log_cmd = &__c_logger_log_cmd_dummy;
 
   if (!__c_logger_log_cmd_args)
     __c_logger_log_cmd_args = &__c_logger_log_cmd_args_dummy;
-
-
-//  if (!__c_logger_log_modules)
-//    __c_logger_log_modules = &__c_logger_log_modules_dummy;
-
-//  if (!__c_logger_log_stack_trace)
-//    __c_logger_log_stack_trace = &__c_logger_log_stack_trace_dummy;
 
   if (!__c_logger_set_current_thread_name)
     __c_logger_set_current_thread_name = &__c_logger_set_current_thread_name_dummy;
@@ -322,9 +339,31 @@ int LOG_CDECL logger_load_dll()
   if (!__c_logger_get_config_param)
     __c_logger_get_config_param = &__c_logger_get_config_param_dummy;
 
-  if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args 
-     /* || !__c_logger_objmon_register || !__c_logger_objmon_unregister || !__c_logger_objmon_dump*/)
-	{
+  if (!__c_logger_reload_config)
+    __c_logger_reload_config = &__c_logger_reload_config_dummy;
+
+  if (!__c_logger_dump_state)
+    __c_logger_dump_state = &__c_logger_dump_state_dummy;
+
+  if (!__c_logger_register_plugin_factory)
+    __c_logger_register_plugin_factory = &__c_logger_register_plugin_factory_dummy;
+
+  if (!__c_logger_unregister_plugin_factory)
+    __c_logger_unregister_plugin_factory = &__c_logger_unregister_plugin_factory_dummy;
+
+  if (!__c_logger_attach_plugin)
+    __c_logger_attach_plugin = &__c_logger_attach_plugin_dummy;
+
+  if (!__c_logger_detach_plugin)
+    __c_logger_detach_plugin = &__c_logger_detach_plugin_dummy;
+  
+  if (!__c_logger_flush)
+    __c_logger_flush = &__c_logger_flush_dummy;
+
+  if (!c_logger_get_version)
+    c_logger_get_version = &c_logger_get_version_dummy;
+
+  if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args) {
 		logger_restore_dummies();
 		return 0;
 	}
@@ -333,4 +372,3 @@ int LOG_CDECL logger_load_dll()
 }
 
 #endif //LOG_USE_DLL && !LOG_THIS_IS_DLL
-

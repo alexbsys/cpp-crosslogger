@@ -38,74 +38,194 @@ void* __c_logger_get_logger() {
 }
 
 extern "C"
-void __c_logger_log_args(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) {
-	logging::_logger->get()->log_args(verbose_level, caller_addr, function, file, line, format, args);
+void* c_logger_ref(void* logobj) {
+  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
+
+  if (!logi)
+    return NULL;
+
+  logi->ref();
+  return log_interface_vptr;
 }
 
 extern "C"
-void __c_logger_log(int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) {
+void* c_logger_deref(void* logobj) {
+  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
+
+  if (!logi)
+    return NULL;
+
+  if (logi->deref() == 0)
+    return NULL;
+
+  return log_interface_vptr;
+}
+
+extern "C"
+unsigned int c_logger_get_version(void* logobj) {
+  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
+
+  if (!logi)
+    return NULL;
+
+  return logi->get_version();
+}
+
+extern "C"
+void __c_logger_log_args(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->log_args(verbose_level, caller_addr, function, file, line, format, args);
+  c_logger_deref(reinterpret_cast<void*>(logi));
+}
+
+extern "C"
+void __c_logger_log(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) {
 	va_list arguments;
 	va_start(arguments, format);
 
-	logging::_logger->get()->log_args(verbose_level, caller_addr, function, file, line, format, arguments);
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+	logi->log_args(verbose_level, caller_addr, function, file, line, format, arguments);
+  c_logger_deref(reinterpret_cast<void*>(logi));
 
 	va_end(arguments);
 }
 
 extern "C"
-void __c_logger_log_cmd(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) {
-  logging::_logger->get()->log_cmd(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam);
+void __c_logger_log_cmd(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->log_cmd(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam);
+  c_logger_deref(reinterpret_cast<void*>(logi));
 }
 
 extern "C"
-void __c_logger_log_cmd_args(int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) {
-  logging::_logger->get()->log_cmd_args(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
-}
-/*
-extern "C"
-void __c_logger_objmon_register(size_t hash_code, const char* type_name, void* ptr) {
-#if LOG_USE_OBJMON
-  logging::_logger->get()->log_objmon_register(hash_code, type_name, ptr);
-#endif //LOG_USE_OBJMON
+void __c_logger_log_cmd_args(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam, va_list args) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->log_cmd_args(cmd_id, verbose_level, caller_addr, function, file, line, vparam, iparam, args);
+  c_logger_deref(reinterpret_cast<void*>(logi));
 }
 
-extern "C"
-void __c_logger_objmon_unregister(size_t hash_code, void* ptr) {
-#if LOG_USE_OBJMON
-  logging::_logger->get()->log_objmon_unregister(hash_code, ptr);
-#endif //LOG_USE_OBJMON
-}
-
-extern "C"
-void __c_logger_objmon_dump(int verbose_level) {
-#if LOG_USE_OBJMON
-  logging::_logger->get()->log_objmon_dump(verbose_level);
-#endif //LOG_USE_OBJMON
-}
-*/
 extern "C"
 void __c_logger_set_current_thread_name(const char* thread_name) {
   logging::detail::utils::set_current_thread_name(thread_name);
 }
 
 extern "C"
-void __c_logger_set_config_param(const char* key, const char* value) {
-  logging::_logger->get()->set_config_param(key, value);
+void __c_logger_set_config_param(void* logobj, const char* key, const char* value) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->set_config_param(key, value);
+  c_logger_deref(reinterpret_cast<void*>(logi));
 }
 
 extern "C"
-int __c_logger_get_config_param(const char* key, char* value, int buffer_size) {
-  const char* val = logging::_logger->get()->get_config_param(key);
-  if (!val)
+int __c_logger_get_config_param(void* logobj, const char* key, char* value, int buffer_size) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
     return 0;
 
-  int len = strlen(val);
+  int ret = logi->get_config_param(key, value, buffer_size);
+  
+  c_logger_deref(reinterpret_cast<void*>(logi));
+  return ret;
+}
 
-  if (len >= buffer_size)
-    return len;
+extern "C"
+void  __c_logger_reload_config(void* logobj) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
 
-  strncpy(value, val, buffer_size);
-  return len;
+  logi->reload_config();
+  c_logger_deref(reinterpret_cast<void*>(logi));
+}
+
+extern "C"
+void __c_logger_dump_state(void* logobj, int verbose_level) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->dump_state(verbose_level);
+  c_logger_deref(reinterpret_cast<void*>(logi));
+}
+
+extern "C"
+int __c_logger_register_plugin_factory(void* logobj, void* factory_interface) {
+  int ret;
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return 0;
+
+  ret = logi->register_plugin_factory(reinterpret_cast<logging::logger_plugin_factory_interface*>(factory_interface)) ? 1 : 0;
+  c_logger_deref(reinterpret_cast<void*>(logi));
+
+  return ret;
+}
+
+extern "C"
+int __c_logger_unregister_plugin_factory(void* logobj, void* factory_interface) {
+  int ret;
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return 0;
+
+  ret = logi->unregister_plugin_factory(reinterpret_cast<logging::logger_plugin_factory_interface*>(factory_interface)) ? 1 : 0;
+  c_logger_deref(reinterpret_cast<void*>(logi));
+
+  return ret;
+}
+
+extern "C"
+int __c_logger_attach_plugin(void* logobj, void* plugin_interface) {
+  int ret;
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return 0;
+
+  ret = logi->attach_plugin(reinterpret_cast<logging::logger_plugin_interface*>(plugin_interface)) ? 1 : 0;
+  c_logger_deref(reinterpret_cast<void*>(logi));
+
+  return ret;
+}
+
+extern "C"
+int __c_logger_detach_plugin(void* logobj, void* plugin_interface) {
+  int ret;
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return 0;
+
+  ret = logi->detach_plugin(reinterpret_cast<logging::logger_plugin_interface*>(plugin_interface)) ? 1 : 0;
+  c_logger_deref(reinterpret_cast<void*>(logi));
+
+  return ret;
+}
+
+extern "C"
+void __c_logger_flush(void* logobj) {
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
+  if (!logi)
+    return;
+
+  logi->flush();
+  c_logger_deref(reinterpret_cast<void*>(logi));
 }
 
 #endif //LOG_ENABLED

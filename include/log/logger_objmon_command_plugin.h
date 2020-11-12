@@ -38,49 +38,44 @@ public:
   }
 
   bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
-    std::stringstream ss;
+    std::stringstream out_stream;
     bool processed = false;
 
     if (cmd_id == kObjectMonitorRegisterCommandId) {
       const struct { unsigned int hash; const char* type_name; void* ptr; } *param_ptr;
       reinterpret_cast<const unsigned char*&>(param_ptr) = reinterpret_cast<const unsigned char*>(vparam);
-      objmon_register(ss, param_ptr->hash, param_ptr->type_name, param_ptr->ptr);
+      objmon_register(out_stream, param_ptr->hash, param_ptr->type_name, param_ptr->ptr);
       processed = true;
     }
 
     if (cmd_id == kObjectMonitorUnregisterCommandId) {
       const struct { unsigned int hash; void* ptr; } *param_ptr;
       reinterpret_cast<const unsigned char*&>(param_ptr) = reinterpret_cast<const unsigned char*>(vparam);
-      objmon_unregister(ss, param_ptr->hash, param_ptr->ptr);
+      objmon_unregister(out_stream, param_ptr->hash, param_ptr->ptr);
       processed = true;
     }
 
     if (cmd_id == kObjectMonitorDumpCommandId) {
-      objmon_dump(ss);
+      objmon_dump(out_stream);
       processed = true;
     }
 
-    out_result = ss.str();
+    out_result = out_stream.str();
     return processed;
   }
 
   virtual bool attach(logger_interface* logger) LOG_METHOD_OVERRIDE {
-#if LOG_MULTITHREADED
     LOG_MT_MUTEX_INIT(&mutex_objmon_, NULL);
-#endif  // LOG_MULTITHREADED
     return true;
   }
 
   virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
-#if LOG_MULTITHREADED
     LOG_MT_MUTEX_DESTROY(&mutex_objmon_);
-#endif  // LOG_MULTITHREADED
   }
 
-
 protected:
-  void objmon_register(std::stringstream& ss, size_t hash_code, const char* type_name, void* ptr) {
-    obj_info_t obj_info;
+  void objmon_register(std::stringstream& out_stream, size_t hash_code, const char* type_name, void* ptr) {
+    obj_info_type obj_info;
     obj_info.ptr_ = ptr;
     obj_info.type_name_ = type_name;
 
@@ -88,51 +83,51 @@ protected:
 
     if (objmon_objs_.find(hash_code) == objmon_objs_.end()) {
       objmon_objs_.insert(
-        std::pair<size_t, std::list<obj_info_t> >(hash_code, std::list<obj_info_t>()));
+        std::pair<size_t, std::list<obj_info_type> >(hash_code, std::list<obj_info_type>()));
     }
 
     objmon_objs_[hash_code].push_back(obj_info);
 
     unlock_objmon();
-    ss << detail::str::stringformat("[objmon] register instance %p, %s", obj_info.ptr_, obj_info.type_name_);
+    out_stream << detail::str::stringformat("[objmon] register instance %p, %s", obj_info.ptr_, obj_info.type_name_);
   }
 
-  void objmon_unregister(std::stringstream& ss, size_t hash_code, void* ptr) {
+  void objmon_unregister(std::stringstream& out_stream, size_t hash_code, void* ptr) {
     lock_objmon();
 
     if (objmon_objs_.find(hash_code) == objmon_objs_.end()) {
       objmon_objs_.insert(
-        std::pair<size_t, std::list<obj_info_t> >(hash_code, std::list<obj_info_t>()));
+        std::pair<size_t, std::list<obj_info_type> >(hash_code, std::list<obj_info_type>()));
     }
 
-    std::list<obj_info_t>& obj_ptrs = objmon_objs_[hash_code];
+    std::list<obj_info_type>& obj_ptrs = objmon_objs_[hash_code];
 
     auto it = std::find_if(obj_ptrs.begin(), obj_ptrs.end(),
-      [ptr](const obj_info_t& obj_info) { return obj_info.ptr_ == ptr; });
+      [ptr](const obj_info_type& obj_info) { return obj_info.ptr_ == ptr; });
 
     if (it != obj_ptrs.end()) {
-      ss << detail::str::stringformat("[objmon] delete instance %p, %s\n", it->ptr_, it->type_name_);
+      out_stream << detail::str::stringformat("[objmon] delete instance %p, %s\n", it->ptr_, it->type_name_);
       obj_ptrs.erase(it);
     }
     else {
-      ss << detail::str::stringformat("[objmon] delete request, but object not found. %p\n", ptr);
+      out_stream << detail::str::stringformat("[objmon] delete request, but object not found. %p\n", ptr);
     }
 
     unlock_objmon();
   }
 
-  void objmon_dump(std::stringstream& ss) {
+  void objmon_dump(std::stringstream& out_stream) {
     lock_objmon();
 
-    ss << "*** OBJECT LIST ***" << std::endl;
+    out_stream << "*** OBJECT LIST ***" << std::endl;
     for (auto it = objmon_objs_.begin(); it != objmon_objs_.end(); it++) {
       if (it->second.size() == 0) continue;
 
-      ss << " ** OBJECT TYPE: " << it->first << ", " << it->second.begin()->type_name_
+      out_stream << " ** OBJECT TYPE: " << it->first << ", " << it->second.begin()->type_name_
         << std::endl;
 
-      for (const obj_info_t& obj_info : it->second) {
-        ss << "  ptr: " << detail::str::stringformat("%.8X", obj_info.ptr_) << std::endl;
+      for (const obj_info_type& obj_info : it->second) {
+        out_stream << "  ptr: " << detail::str::stringformat("%.8X", obj_info.ptr_) << std::endl;
       }
     }
 
@@ -140,23 +135,21 @@ protected:
   }
 
 private:
-  struct obj_info_t {
-    void* ptr_;
-    const char* type_name_;
-  };
-
-  std::map<size_t, std::list<obj_info_t> > objmon_objs_;
-
-  LOG_MT_MUTEX mutex_objmon_;
-
-  __inline void lock_objmon() {
+  LOG_INLINE void lock_objmon() {
     LOG_MT_MUTEX_LOCK(&mutex_objmon_);
   }
 
-  __inline void unlock_objmon() {
+  LOG_INLINE void unlock_objmon() {
     LOG_MT_MUTEX_UNLOCK(&mutex_objmon_);
   }
 
+  struct obj_info_type {
+    void* ptr_;              /// Pointer to object
+    const char* type_name_;  /// Object type name
+  };
+
+  std::map<size_t, std::list<obj_info_type> > objmon_objs_; /// Objects storage (hashcode,object info)
+  LOG_MT_MUTEX mutex_objmon_;
   std::string plugin_name_;
 };
 

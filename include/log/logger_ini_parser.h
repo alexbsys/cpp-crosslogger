@@ -1,5 +1,4 @@
-
-
+// simple INI parser
 #ifndef LOGGER_INI_PARSER_HEADER
 #define LOGGER_INI_PARSER_HEADER
 
@@ -10,9 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//////////////////////////// INI files parser START //////////////////////////////
-
-// simple INI parser
 namespace logging {
 namespace detail {
 namespace ini_parser {
@@ -45,8 +41,8 @@ http://code.google.com/p/inih/
 #define INI_MAX_LINE 8192
 #endif
 
-#define MAX_SECTION 256
-#define MAX_NAME 256
+#define INI_MAX_SECTION 256
+#define INI_MAX_NAME 256
 
 extern "C" {
 
@@ -89,8 +85,8 @@ static int ini_parse_file(FILE* file,
   /* Uses a fair bit of stack (use heap instead if you need to) */
   char* line;
 
-  char section[MAX_SECTION] = "";
-  char prev_name[MAX_NAME] = "";
+  char section[INI_MAX_SECTION] = "";
+  char prev_name[INI_MAX_NAME] = "";
 
   char* start;
   char* end;
@@ -187,14 +183,9 @@ static int ini_parse(const char* filename,
 
 }  // extern "C"
 
-
 }  // namespace ini_parser
 }  // namespace detail
 }  // namespace logging
-
-//////////////////////////// INI files parser END //////////////////////////////
-
-
 
 #endif /*LOGGER_INI_PARSER_HEADER*/
 

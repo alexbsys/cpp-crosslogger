@@ -1,4 +1,7 @@
 
+// Logger implementation part
+// This file must be included from C++ part
+
 #ifndef LOGGER_IMPL_HEADER
 #define LOGGER_IMPL_HEADER
 
@@ -30,6 +33,12 @@
 #include "logger_moddef.h"
 #endif /*LOG_USE_MODULEDEFINITION*/
 
+
+#if LOG_TEST_DO_NOT_WRITE_FILE
+#include <sstream>
+#undef LOG_FLUSH_FILE_EVERY_WRITE
+#define LOG_FLUSH_FILE_EVERY_WRITE 1l
+#endif  // LOG_TEST_DO_NOT_WRITE_FILE
 
 namespace logging {
 namespace detail {
@@ -171,6 +180,8 @@ class logger : public logger_interface {
   void* shared_obj_ptr_;
 #endif  // LOG_SHARED
 
+  LOG_MT_MUTEX mt_buffer_lock_;
+
 #if LOG_MULTITHREADED
   /** Log record message structure */
   struct log_record {
@@ -179,9 +190,6 @@ class logger : public logger_interface {
     std::string text_;
     log_record() : verb_level_(logger_verbose_mute) {}
   };
-
-  /** buffer lock object */
-  LOG_MT_MUTEX mt_buffer_lock_;
 
   /** Multithreaded buffer */
   std::list<log_record> mt_buffer_;
@@ -206,6 +214,7 @@ private:
       __stdcall
 #endif  // LOG_PLATFORM_WINDOWS
       log_thread_fn(void* data) {
+    const int kPollWriteEventMs = 250;
     utils::set_current_thread_name("logger_thread");
     logger* log = reinterpret_cast<logger*>(data);
     
@@ -218,10 +227,10 @@ private:
 
       // mutex locked section
       {
-        LOG_MT_MUTEX_LOCK(&log->mt_buffer_lock_);
+        mt::mutex_scope_lock lock(&log->mt_buffer_lock_);
 
         if (log->mt_buffer_.size() == 0) {
-          mt::wait_event(&log->write_event_, &log->mt_buffer_lock_, true, 250);
+          mt::wait_event(&log->write_event_, &log->mt_buffer_lock_, true, kPollWriteEventMs);
         }
 
         // copy all records from log to local and clear log buffer
@@ -230,8 +239,6 @@ private:
 
         log->plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
         //outputs = log->plugins_[kLogPluginTypeOutput];
-
-        LOG_MT_MUTEX_UNLOCK(&log->mt_buffer_lock_);
 
         mt_terminating = log->mt_terminating_;
       }
@@ -298,7 +305,7 @@ private:
   void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
     handle_first_write();
 
-    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
+    mt::mutex_scope_lock lock(&mt_buffer_lock_);
 
     if (LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES &&
         mt_buffer_.size() > LOG_MULTITHREADED_MAX_BUFFERED_MESSAGES) {
@@ -312,14 +319,13 @@ private:
 
     mt_buffer_.push_back(record);
     mt::fire_event(&write_event_);
-	  LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
   }
 
 
 
 #else  // LOG_MULTITHREADED
   /** Single threaded put_to_stream */
-  __inline void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
+  LOG_INLINE void put_to_stream(int verb_level, const std::string& hdr, const std::string& what) {
     handle_first_write();
     std::string text = hdr + std::string(" ") + what + std::string("\n");
 
@@ -430,10 +436,17 @@ private:
 
   // TODO: maybe need to add remove_config_param_override ?
 
-  const char* get_config_param(const char* key) const {
-    return cfg::get_value(config_, key).c_str();
+  int get_config_param(const char* key, char* buffer, int buffer_size) const {
+    std::string val = cfg::get_value(config_, key);
+    if (buffer && buffer_size) {
+      *buffer = 0;
+      if (buffer_size > static_cast<int>(val.size()) + 1) {
+        memcpy(buffer, val.c_str(), val.size() + 1);
+        return 1;
+      }
+    }
+    return 0;
   }
-
 
   bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
     return plugin_mgr_->register_plugin_factory(plugin_factory_interface);
@@ -445,12 +458,14 @@ private:
 
 
   void flush() {
+    mt::mutex_scope_lock lock(&mt_buffer_lock_);
+
 #if LOG_MULTITHREADED
-    LOG_MT_MUTEX_LOCK(&mt_buffer_lock_);
+    const int kPollBufferDevastatedEventMs = 100;
 
     // flush multithreaded buffer
     while(mt_buffer_.size()) {
-      if (mt::wait_event(&buffer_devastated_, &mt_buffer_lock_, true, 100))
+      if (mt::wait_event(&buffer_devastated_, &mt_buffer_lock_, true, kPollBufferDevastatedEventMs))
         break;
     }
 #endif  // LOG_MULTITHREADED
@@ -463,12 +478,7 @@ private:
       it != output_plugins.cend(); it++) {
       (*it)->flush();
     }
-
-#if LOG_MULTITHREADED
-    LOG_MT_MUTEX_UNLOCK(&mt_buffer_lock_);
-#endif  // LOG_MULTITHREADED
   }
-
 
   log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) {
     return log_stream(this, verb_level, addr, function_name, source_file, line_number);
@@ -479,6 +489,9 @@ private:
     return plugin_mgr_->attach_plugin(plugin_ptr);
   }
 
+  bool detach_plugin(logger_plugin_interface* plugin_interface) LOG_METHOD_OVERRIDE {
+    return plugin_mgr_->detach_plugin(plugin_interface);
+  }
 
   unsigned int get_version() const LOG_METHOD_OVERRIDE {
     return 0x02010101;
@@ -511,9 +524,7 @@ private:
 
     plugin_mgr_ = new plugin_manager(this);
 
-#if LOG_MULTITHREADED
     LOG_MT_MUTEX_INIT(&mt_buffer_lock_, NULL);
-#endif /*LOG_MULTITHREADED*/
 
     reload_config();
 
@@ -521,14 +532,17 @@ private:
     mt::create_event(&write_event_);
     mt::create_event(&buffer_devastated_);
 
-#  ifdef LOG_PLATFORM_WINDOWS
+    log_thread_handle_ = mt::thread_start(&log_thread_fn, this);
 
-    DWORD thread_id;
-    log_thread_handle_ = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&log_thread_fn,
-                                     this, 0, &thread_id);    
-#  else   /*LOG_PLATFORM_WINDOWS*/
-    pthread_create(&log_thread_handle_, NULL, (void* (*)(void*)) & log_thread_fn, this);
-#  endif  /*LOG_PLATFORM_WINDOWS*/
+//#  ifdef LOG_PLATFORM_WINDOWS
+//
+//    DWORD thread_id;
+//    log_thread_handle_ = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&log_thread_fn,
+//                                     this, 0, &thread_id);    
+//#  else   /*LOG_PLATFORM_WINDOWS*/
+//    pthread_create(&log_thread_handle_, NULL, (void* (*)(void*)) & log_thread_fn, this);
+//#  endif  /*LOG_PLATFORM_WINDOWS*/
+
 #endif  /*LOG_MULTITHREADED*/
   }
 
@@ -744,14 +758,6 @@ private:
   }
 
   void reload_config() {
-//#if LOG_INI_CONFIGURATION
-//    log_ini_configurator::configure(configurator.get_ini_file_find_paths().c_str());
-//#endif  // LOG_INI_CONFIGURATION
-
-//#if LOG_CONFIGURE_FROM_REGISTRY
-//    log_registry_configurator::configure(configurator.get_reg_config_path());
-//#endif  // LOG_CONFIGURE_FROM_REGISTRY
-
     reload_config_from_plugins();
     update_config();
   }
@@ -900,7 +906,7 @@ private:
   }
 
 #if !LOG_USE_MODULEDEFINITION
-  __inline std::string try_get_module_name_fast(void* ptr) {
+  LOG_INLINE std::string try_get_module_name_fast(void* ptr) {
     (void)ptr;
     return std::string();
   }
@@ -1183,7 +1189,7 @@ private:
    * \param    verb_level    Verbose level value
    * \return   true - message is enabled for output, false - disabled
    */
-  __inline bool is_message_enabled(int verb_level) const {
+  LOG_INLINE bool is_message_enabled(int verb_level) const {
     return (log_config_.filter_verbose_level_ & verb_level) ? true : false;
   }
 

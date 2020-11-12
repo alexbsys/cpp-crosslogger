@@ -90,6 +90,8 @@ protected:
 
       get_parameters_recursive(base_key, subkey_reg_path, subkey_section_base, config);
     }
+
+    return true;
   }
 
 private:

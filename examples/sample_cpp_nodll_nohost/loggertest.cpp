@@ -1,7 +1,7 @@
 // Extremely simplest example
 // No dependencies at all, no additional CPP files, only logger.h
 
-#include <log/logger_win_config_macro_plugin.h>
+/*#include <log/logger_win_config_macro_plugin.h>
 #include <log/logger_ini_config_plugin.h>
 #include <log/logger_scroll_file_output_plugin.h>
 #include <log/logger_binary_command_plugin.h>
@@ -10,6 +10,8 @@
 #include <log/logger_crashhandler_command_plugin.h>
 #include <log/logger_objmon_command_plugin.h>
 #include <log/logger_win_registry_config_plugin.h>
+*/
+#include <log/logger_register_builtin_plugin.h>
 
 #include <log/logger.h>
 #include <fstream>
@@ -193,7 +195,38 @@ public:
   virtual ~LogToConsole() {}
   const char* type() const { return "console_output"; }
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
+    int default_color = get_console_text_color();
+    int color = default_color;
+
+    switch (verb_level) {
+    case LOGGER_VERBOSE_INFO:  color = 9; break;
+    case LOGGER_VERBOSE_DEBUG: color = 3; break;
+    case LOGGER_VERBOSE_NORMAL: break;
+    case LOGGER_VERBOSE_ERROR: color = 4; break;
+    case LOGGER_VERBOSE_FATAL: color = 12; break;
+    }
+
+    set_console_text_color(color);
     printf("%s %s\n", hdr.c_str(), what.c_str());
+    set_console_text_color(default_color);
+  }
+
+private:
+  int get_console_text_color() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+    WORD saved_attributes;
+
+    /* Save current attributes */
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    saved_attributes = consoleInfo.wAttributes;
+
+    return saved_attributes;
+  }
+
+  void set_console_text_color(int color) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, static_cast<WORD>(color));
   }
 
 
@@ -203,16 +236,17 @@ int main(int argc, char* argv[]) {
 
 	// enable all logger messgaes
 //	LOG_SET_VERBOSE_LEVEL(LOGGER_VERBOSE_ALL);
+  LOG_REGISTER_PLUGIN_FACTORY(new logging::logger_register_builtin_plugin_factory());
 
-  logging::_logger->get()->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
-  logging::_logger->get()->register_plugin_factory(new logging::logger_binary_command_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_stacktrace_command_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_modules_command_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_win_config_macro_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_crashhandler_command_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_objmon_command_plugin_factory());
-  logging::_logger->get()->register_plugin_factory(new logging::logger_win_registry_config_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_scroll_file_output_plugin_factory() );
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_binary_command_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_stacktrace_command_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_modules_command_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_win_config_macro_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_ini_config_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_crashhandler_command_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_objmon_command_plugin_factory());
+  //logging::_logger->get()->register_plugin_factory(new logging::logger_win_registry_config_plugin_factory());
 
 //	logging::configurator.set_log_file_name(logging::detail::utils::get_process_file_name());
 //  logging::configurator.set_log_scroll_file_count(6);
@@ -225,19 +259,19 @@ int main(int argc, char* argv[]) {
 
 //  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
 //  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
-  logging::_logger->get()->attach_plugin(new LogToConsole());
+  LOG_ATTACH_PLUGIN(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
-  logging::_logger->get()->set_config_param("logger::LoadPlugins", "win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config");
-  logging::_logger->get()->set_config_param("IniFilePaths", LOG_DEFAULT_INI_PATHS);
-  logging::_logger->get()->set_config_param("logger::RegistryConfigPath", "HKCU\\Software\\Test");
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "register_builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config");
+  LOG_SET_CONFIG_PARAM("IniFilePaths", LOG_DEFAULT_INI_PATHS);
+  LOG_SET_CONFIG_PARAM("logger::RegistryConfigPath", "HKCU\\Software\\Test");
 
-  logging::_logger->get()->reload_config();
+  LOG_RELOAD_CONFIG();
 
-  logging::_logger->get()->dump_state(logging::logger_verbose_info);
-  logging::_logger->get()->flush();
+  LOG_DUMP_STATE(LOGGER_VERBOSE_INFO);
+  LOG_FLUSH();
 
-  LOG_CMD(0x100A, logging::logger_verbose_debug, NULL, 0);
+  LOG_CMD(0x100A, LOGGER_VERBOSE_DEBUG, NULL, 0);
 
   const char* msg = "HELLO";
 
@@ -255,7 +289,7 @@ int main(int argc, char* argv[]) {
   LOG_DEBUG("%.8X", msg);
 
 //  (*logging::_logger.get()) << "Hello world" << " test " << 12345;
-  LOGS_DEBUG() << "Hello world" << " test " << 12345;
+  LOGS_ERROR() << "Hello world" << " test " << 12345;
   LOGS_DEBUG() << "Next string " << std::string("this-is-stdstring");
 
 	LOG_INFO("Formatted string example. Ten: %d, string: %s", 10, "ABCDEFG");

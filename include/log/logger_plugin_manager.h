@@ -127,7 +127,7 @@ public:
   }
 
   /** Detach plugin from logger */
-  bool detach_plugin(shared_ptr<logger_plugin_interface> plugin_interface) {
+  bool detach_plugin(const logger_plugin_interface* plugin_interface) {
     if (!plugin_interface)
       return false;
 
@@ -138,7 +138,7 @@ public:
     bool result = false;
 
     for (std::list<plugin_data>::iterator it = plugins_.at(plugin_type).begin(); it != plugins_.at(plugin_type).end(); it++) {
-      if (it->plugin_ != plugin_interface)
+      if (it->plugin_.get() != plugin_interface)
         continue;
 
       it->plugin_->detach(base_);
@@ -153,7 +153,7 @@ public:
   void detach_all_plugins() {
     for (int i = kLogPluginTypeMin; i <= kLogPluginTypeMax; i++) {
       while (plugins_.at(i).size()) {
-        detach_plugin(plugins_.at(i).begin()->plugin_);
+        detach_plugin(plugins_.at(i).begin()->plugin_.get());
       }
     }
   }

@@ -33,6 +33,7 @@
 #  define LOG_METHOD_OVERRIDE
 #endif /*LOG_CPP_X11*/
 
+#define LOG_INLINE   __inline
 
 ////////////////////////////// LOG_SELF_PROC_LINK definition for all platforms START //////////////////////////////
 #if defined(LOG_PLATFORM_LINUX) || defined(LOG_PLATFORM_CYGWIN)
