@@ -14,10 +14,13 @@
 // DO NOT ADD BOTH LOGGER.CPP AND LOGGERDLL.C
 
 #include <log/logger.h>
+#include <log/logger_register_builtin_plugin.h>
 
 #if !LOG_USE_DLL || defined(LOG_THIS_IS_DLL)
 
-DEFINE_LOGGER();
+void on_logger_created_fn(logging::logger_interface* log);
+
+DEFINE_LOGGER(&on_logger_created_fn);
 
 ///////   C tail  ///////
 
@@ -26,8 +29,16 @@ extern "C"
 void __cxa_pure_virtual() {}
 #endif //LOG_PLATFORM_WINDOWS
 
+void on_logger_created_fn(logging::logger_interface* log) {
+  if (log) {
+    log->register_plugin_factory(new logging::logger_register_builtin_plugin_factory());
+  }
+}
+
 
 #if LOG_ENABLED
+
+
 
 extern "C"
 void* __c_logger_get_logger() {

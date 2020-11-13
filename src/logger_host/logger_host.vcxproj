@@ -28,6 +28,7 @@
     <ClInclude Include="..\..\include\log\logger_c.h" />
     <ClInclude Include="..\..\include\log\logger_cfgfn.h" />
     <ClInclude Include="..\..\include\log\logger_cfgcheck.h" />
+    <ClInclude Include="..\..\include\log\logger_colored_console_output_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_config.h" />
     <ClInclude Include="..\..\include\log\logger_crashhandler_command_plugin.h" />
     <ClInclude Include="..\..\include\log\logger_impl.h" />

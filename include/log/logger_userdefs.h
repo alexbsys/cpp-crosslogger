@@ -5,7 +5,7 @@
 #include "logger_config.h"
 #include "logger_pdetect.h"
 #include "logger_pdefs.h"
-
+#include "logger_verbose.h"
 
 #if !LOG_ENABLED
 #define LOG_INFO(...)
@@ -74,16 +74,16 @@
 #if defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
 // Logger inproc implementation
 
-#define LOGGER_VERBOSE_FATAL logging::logger_verbose_fatal
-#define LOGGER_VERBOSE_ERROR logging::logger_verbose_error
-#define LOGGER_VERBOSE_INFO  logging::logger_verbose_info
-#define LOGGER_VERBOSE_WARNING logging::logger_verbose_warning
-#define LOGGER_VERBOSE_DEBUG logging::logger_verbose_debug
-#define LOGGER_VERBOSE_OPTIMAL logging::logger_verbose_optimal
-#define LOGGER_VERBOSE_MUTE logging::logger_verbose_mute
-#define LOGGER_VERBOSE_FATAL_ERROR  logging::logger_verbose_fatal_error
-#define LOGGER_VERBOSE_ALL logging::logger_verbose_all
-#define LOGGER_VERBOSE_NORMAL logging::logger_verbose_normal
+//#define LOGGER_VERBOSE_FATAL logging::logger_verbose_fatal
+//#define LOGGER_VERBOSE_ERROR logging::logger_verbose_error
+//#define LOGGER_VERBOSE_INFO  logging::logger_verbose_info
+//#define LOGGER_VERBOSE_WARNING logging::logger_verbose_warning
+//#define LOGGER_VERBOSE_DEBUG logging::logger_verbose_debug
+//#define LOGGER_VERBOSE_OPTIMAL logging::logger_verbose_optimal
+//#define LOGGER_VERBOSE_MUTE logging::logger_verbose_mute
+//#define LOGGER_VERBOSE_FATAL_ERROR  logging::logger_verbose_fatal_error
+//#define LOGGER_VERBOSE_ALL logging::logger_verbose_all
+//#define LOGGER_VERBOSE_NORMAL logging::logger_verbose_normal
 
 
 #define LOGOBJ_CMD(logobj,cmdid,v,p,l) \
@@ -134,16 +134,16 @@
 #else
 // Logger outproc implementation
 
-#define LOGGER_VERBOSE_FATAL logger_verbose_fatal
-#define LOGGER_VERBOSE_ERROR logger_verbose_error
-#define LOGGER_VERBOSE_INFO  logger_verbose_info
-#define LOGGER_VERBOSE_WARNING logger_verbose_warning
-#define LOGGER_VERBOSE_DEBUG logger_verbose_debug
-#define LOGGER_VERBOSE_OPTIMAL logger_verbose_optimal
-#define LOGGER_VERBOSE_MUTE logger_verbose_mute
-#define LOGGER_VERBOSE_FATAL_ERROR  logger_verbose_fatal_error
-#define LOGGER_VERBOSE_ALL logger_verbose_all
-#define LOGGER_VERBOSE_NORMAL logger_verbose_normal
+//#define LOGGER_VERBOSE_FATAL logger_verbose_fatal
+//#define LOGGER_VERBOSE_ERROR logger_verbose_error
+//#define LOGGER_VERBOSE_INFO  logger_verbose_info
+//#define LOGGER_VERBOSE_WARNING logger_verbose_warning
+//#define LOGGER_VERBOSE_DEBUG logger_verbose_debug
+//#define LOGGER_VERBOSE_OPTIMAL logger_verbose_optimal
+//#define LOGGER_VERBOSE_MUTE logger_verbose_mute
+//#define LOGGER_VERBOSE_FATAL_ERROR  logger_verbose_fatal_error
+//#define LOGGER_VERBOSE_ALL logger_verbose_all
+//#define LOGGER_VERBOSE_NORMAL logger_verbose_normal
 
 
 #define LOGOBJ_CMD(logobj,cmdid,v,p,l) \
@@ -410,13 +410,15 @@
 
 // Logger instance definition macro
 #if LOG_SHARED
-#  define DEFINE_LOGGER()                                                            \
+#  define DEFINE_LOGGER(on_create_fn)                                                 \
     logging::logger_singleton_interface<logging::logger_interface>* logging::_logger( \
     new logging::singleton<logging::logger_interface, logging::detail::logger>( \
-      &logging::logger_interface::ref, &logging::logger_interface::deref,          \
+      (on_create_fn), \
+      &logging::logger_interface::ref, \
+      &logging::logger_interface::deref,          \
       &logging::logger_interface::ref_counter,                                     \
       (logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), \
-      false));
+      false))
 
 //DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
 #else  // LOG_SHARED

@@ -15,10 +15,15 @@ namespace logging {
 template <typename _TIf, typename _TImpl = _TIf>
 class singleton : public logger_singleton_interface<_TIf> {
  public:
-  singleton(int (_TIf::*ref_fn)() = NULL, int (_TIf::*deref_fn)() = NULL,
-            int (_TIf::*ref_cnt_fn)() const = NULL, _TIf* ptr = NULL, bool need_delete = false)
+  singleton(void (*on_create_fn)(_TIf*) = NULL,
+            int (_TIf::*ref_fn)() = NULL, 
+            int (_TIf::*deref_fn)() = NULL,
+            int (_TIf::*ref_cnt_fn)() const = NULL, 
+            _TIf* ptr = NULL, 
+            bool need_delete = false)
       : ptr_(NULL),
         need_delete_(false),
+        on_create_fn_(on_create_fn),
         ref_fn_(ref_fn),
         deref_fn_(deref_fn),
         ref_cnt_fn_(ref_cnt_fn) {
@@ -39,6 +44,9 @@ class singleton : public logger_singleton_interface<_TIf> {
       need_delete_ = true;
 
       if (ref_fn_) (ptr_->*ref_fn_)();
+
+      if (on_create_fn_)
+        on_create_fn_(ptr_);
     }
 
     return ptr_;
@@ -73,6 +81,7 @@ class singleton : public logger_singleton_interface<_TIf> {
   _TIf* ptr_;
   bool need_delete_;
 
+  void(*on_create_fn_)(_TIf*);
   int (_TIf::*ref_fn_)();
   int (_TIf::*deref_fn_)();
   int (_TIf::*ref_cnt_fn_)() const;

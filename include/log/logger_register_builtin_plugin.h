@@ -15,6 +15,7 @@
 #include "logger_crashhandler_command_plugin.h"
 #include "logger_objmon_command_plugin.h"
 #include "logger_win_registry_config_plugin.h"
+#include "logger_colored_console_output_plugin.h"
 
 namespace logging {
 
@@ -28,6 +29,7 @@ namespace logging {
       plugin_factories_.push_back(new logger_ini_config_plugin_factory());
       plugin_factories_.push_back(new logger_crashhandler_command_plugin_factory());
       plugin_factories_.push_back(new logger_objmon_command_plugin_factory());
+      plugin_factories_.push_back(new logger_colored_console_output_plugin_factory());
 
 #ifdef LOG_PLATFORM_WINDOWS
       plugin_factories_.push_back(new logger_win_config_macro_plugin_factory());

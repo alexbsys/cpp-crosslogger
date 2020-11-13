@@ -152,5 +152,8 @@
     <ClInclude Include="..\..\include\log\logger_register_builtin_plugin.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_colored_console_output_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

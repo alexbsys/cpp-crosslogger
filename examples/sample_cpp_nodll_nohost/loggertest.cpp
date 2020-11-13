@@ -29,11 +29,15 @@
 // Shared log example will be used
 #define LOG_SHARED 1
 
+void on_logger_create_fn(logging::logger_interface* log) {
+
+}
 
 /// !!!! Need to define once in one of cpp file (if logger.cpp was not used)
 //DEFINE_LOGGER();
 logging::logger_singleton_interface<logging::logger_interface>* logging::_logger(
   new logging::singleton<logging::logger_interface, logging::detail::logger>(\
+    &on_logger_create_fn,
     &logging::logger_interface::ref, &logging::logger_interface::deref, \
     &logging::logger_interface::ref_counter, \
     (logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), \
@@ -101,7 +105,7 @@ void example_log_sourcefile_linenumbers() {
 #if LOG_SHARED
 void example_shared_log_feature(int rounds)
 {
-	logging::singleton<logging::logger_interface, logging::detail::logger> _logger1( 
+	logging::singleton<logging::logger_interface, logging::detail::logger> _logger1( NULL,
 		&logging::logger_interface::ref, &logging::logger_interface::deref, &logging::logger_interface::ref_counter, 
 		(logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), false); 
 
@@ -259,10 +263,10 @@ int main(int argc, char* argv[]) {
 
 //  logging::_logger->attach_plugin(new logging::logger_win_config_macro_plugin());
 //  logging::_logger->attach_plugin(new logging::logger_ini_config_plugin());
-  LOG_ATTACH_PLUGIN(new LogToConsole());
+//  LOG_ATTACH_PLUGIN(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
-  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "register_builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config");
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "register_builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config console_output");
   LOG_SET_CONFIG_PARAM("IniFilePaths", LOG_DEFAULT_INI_PATHS);
   LOG_SET_CONFIG_PARAM("logger::RegistryConfigPath", "HKCU\\Software\\Test");
 

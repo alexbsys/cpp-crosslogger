@@ -280,7 +280,4 @@ public:
 
 }//namespace logging
 
-
-
-
 #endif /*LOGGER_SCROLL_FILE_OUTPUT_PLUGIN_HEADER*/
