@@ -24,7 +24,7 @@
 
 #include "log/logger.h"
 
-DEFINE_LOGGER();
+DEFINE_LOGGER(NULL);
 
 bool get_line_skip_empty(std::ifstream& infile, std::string& line)
 {

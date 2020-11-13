@@ -74,18 +74,6 @@
 #if defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
 // Logger inproc implementation
 
-//#define LOGGER_VERBOSE_FATAL logging::logger_verbose_fatal
-//#define LOGGER_VERBOSE_ERROR logging::logger_verbose_error
-//#define LOGGER_VERBOSE_INFO  logging::logger_verbose_info
-//#define LOGGER_VERBOSE_WARNING logging::logger_verbose_warning
-//#define LOGGER_VERBOSE_DEBUG logging::logger_verbose_debug
-//#define LOGGER_VERBOSE_OPTIMAL logging::logger_verbose_optimal
-//#define LOGGER_VERBOSE_MUTE logging::logger_verbose_mute
-//#define LOGGER_VERBOSE_FATAL_ERROR  logging::logger_verbose_fatal_error
-//#define LOGGER_VERBOSE_ALL logging::logger_verbose_all
-//#define LOGGER_VERBOSE_NORMAL logging::logger_verbose_normal
-
-
 #define LOGOBJ_CMD(logobj,cmdid,v,p,l) \
   (logobj)->log_cmd((cmdid), (v), LOG_GET_CALLER_ADDR, __FUNCTION__, \
                         __FILE__, __LINE__, (p), (l) )
@@ -134,24 +122,9 @@
 #else
 // Logger outproc implementation
 
-//#define LOGGER_VERBOSE_FATAL logger_verbose_fatal
-//#define LOGGER_VERBOSE_ERROR logger_verbose_error
-//#define LOGGER_VERBOSE_INFO  logger_verbose_info
-//#define LOGGER_VERBOSE_WARNING logger_verbose_warning
-//#define LOGGER_VERBOSE_DEBUG logger_verbose_debug
-//#define LOGGER_VERBOSE_OPTIMAL logger_verbose_optimal
-//#define LOGGER_VERBOSE_MUTE logger_verbose_mute
-//#define LOGGER_VERBOSE_FATAL_ERROR  logger_verbose_fatal_error
-//#define LOGGER_VERBOSE_ALL logger_verbose_all
-//#define LOGGER_VERBOSE_NORMAL logger_verbose_normal
-
-
 #define LOGOBJ_CMD(logobj,cmdid,v,p,l) \
   __c_logger_log_cmd((logobj), (cmdid), (v), LOG_GET_CALLER_ADDR, __FUNCTION__, \
                         __FILE__, __LINE__, (p), (l))
-
-//#define LOG_CMD(cmdid,v,p,l) \
-//  LOGOBJ_CMD(0L, (cmdid), (v), (p), (l))
 
 #define LOGOBJ_TEXT(logobj, v, ...) \
   __c_logger_log((logobj), (v), LOG_GET_CALLER_ADDR, __FUNCTION__, \
@@ -187,9 +160,6 @@
 
 #define LOGOBJ_FLUSH(logobj) \
   __c_logger_flush((logobj))
-
-//#define LOG_TEXT(v, ...) \
-//  LOGOBJ_TEXT(0L, (v), __VA_ARGS__)
 
 #define LOG_STREAM(v) 
 
@@ -428,74 +398,7 @@
 #endif  // LOG_SHARED
 
 #else /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
-/*
-#define LOG_INFO(...)                                                                    \
-  LOG_TEXT(logger_verbose_info, __VA_ARGS__)  
-#define LOG_DEBUG(...)                                                      \
-  LOG_TEXT(logger_verbose_debug, __VA_ARGS__)  
-#define LOG_WARNING(...)                                                      \
-  LOG_TEXT(logger_verbose_warning, __VA_ARGS__)  
-#define LOG_ERROR(...)                                                      \
-  LOG_TEXT(logger_verbose_error, __VA_ARGS__)  
-#define LOG_FATAL(...)                                                      \
-  LOG_TEXT(logger_verbose_fatal, __VA_ARGS__)  
-  */
 
-
-/*
-#define LOG_INFO(...)                                                              \
-  __c_logger_log(logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, __VA_ARGS__)
-#define LOG_DEBUG(...)                                                              \
-  __c_logger_log(logger_verbose_debug, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, __VA_ARGS__)
-#define LOG_WARNING(...)                                                              \
-  __c_logger_log(logger_verbose_warning, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, __VA_ARGS__)
-#define LOG_ERROR(...)                                                              \
-  __c_logger_log(logger_verbose_error, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, __VA_ARGS__)
-#define LOG_FATAL(...)                                                              \
-  __c_logger_log(logger_verbose_fatal, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, __VA_ARGS__)
-                 */
-#define LOG_SET_VERBOSE_LEVEL(l)   \
-  __c_logger_set_verbose_level(l)
-/*
-#define LOG_EXCEPTION_TEXT_INFO(msg)                                                              \
-  __c_logger_log(logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, "** Exception: %s", msg)
-#define LOG_EXCEPTION_TEXT_DEBUG(msg)                                                              \
-  __c_logger_log(logger_verbose_debug, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, "** Exception: %s", msg)
-#define LOG_EXCEPTION_TEXT_WARNING(msg)                                                              \
-  __c_logger_log(logger_verbose_warning, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, "** Exception: %s", msg)
-#define LOG_EXCEPTION_TEXT_ERROR(msg)                                                              \
-  __c_logger_log(logger_verbose_error, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, "** Exception: %s", msg)
-#define LOG_EXCEPTION_TEXT_FATAL(msg)                                                              \
-  __c_logger_log(logger_verbose_fatal, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, \
-                 __LINE__, "** Exception: %s", msg)
-
-
-
-#define LOG_BINARY_INFO(p, stack_frame)                                         \
-  __c_logger_log_binary(logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                        __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_DEBUG(p, stack_frame)                                         \
-  __c_logger_log_binary(logger_verbose_debug, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                        __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_WARNING(p, stack_frame)                                         \
-  __c_logger_log_binary(logger_verbose_warning, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                        __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_ERROR(p, stack_frame)                                         \
-  __c_logger_log_binary(logger_verbose_error, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                        __FILE__, __LINE__, p, stack_frame)
-#define LOG_BINARY_FATAL(p, stack_frame)                                         \
-  __c_logger_log_binary(logger_verbose_fatal, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                        __FILE__, __LINE__, p, stack_frame)
-                        */
 #define LOG_SET_CURRENT_THREAD_NAME(name) __c_logger_set_current_thread_name(name)
 
 
@@ -505,74 +408,14 @@
   __c_logger_log_cmd(0x1010, logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, __LINE__, &param, 0) \
 }
 
-//  __c_logger_objmon_register(typeid(*this).hash_code(), typeid(*this).name(), this)
 
 #define LOG_OBJMON_UNREGISTER_INSTANCE() \
   __c_logger_objmon_unregister(typeid(*this).hash_code(), this)
-#define LOG_OBJMON_DUMP_INFO() __c_logger_objmon_dump(logger_verbose_info)
-#define LOG_OBJMON_DUMP_DEBUG() __c_logger_objmon_dump(logger_verbose_debug)
-#define LOG_OBJMON_DUMP_WARNING() __c_logger_objmon_dump(logger_verbose_warning)
-#define LOG_OBJMON_DUMP_ERROR() __c_logger_objmon_dump(logger_verbose_error)
+//#define LOG_OBJMON_DUMP_INFO() __c_logger_objmon_dump(logger_verbose_info)
+//#define LOG_OBJMON_DUMP_DEBUG() __c_logger_objmon_dump(logger_verbose_debug)
+//#define LOG_OBJMON_DUMP_WARNING() __c_logger_objmon_dump(logger_verbose_warning)
+//#define LOG_OBJMON_DUMP_ERROR() __c_logger_objmon_dump(logger_verbose_error)
 #endif  // LOG_USE_OBJMON
-/*
-#if LOG_USE_MODULEDEFINITION
-
-#define LOG_MODULES_DEBUG()                                                         \
-  __c_logger_log_modules(logger_verbose_debug, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                         __FILE__, __LINE__)
-#define LOG_MODULES_INFO                                                         \
-  __c_logger_log_modules(logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                         __FILE__, __LINE__)
-#define LOG_MODULES_WARNING                                                         \
-  __c_logger_log_modules(logger_verbose_warning, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                         __FILE__, __LINE__)
-#define LOG_MODULES_ERROR                                                         \
-  __c_logger_log_modules(logger_verbose_error, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                         __FILE__, __LINE__)
-#define LOG_MODULES_FATAL                                                         \
-  __c_logger_log_modules(logger_verbose_fatal, LOG_GET_CALLER_ADDR, __FUNCTION__, \
-                         __FILE__, __LINE__)
-
-#else  // LOG_USE_MODULEDEFINITION
-
-#define LOG_MODULES_DEBUG()
-#define LOG_MODULES_INFO()
-#define LOG_MODULES_WARNING()
-#define LOG_MODULES_ERROR()
-#define LOG_MODULES_FATAL()
-
-#endif  // LOG_USE_MODULEDEFINITION
-*/
-
-
-
-//#if LOG_AUTO_DEBUGGING
-//
-//#define LOG_STACKTRACE_DEBUG()                                                     \
-//  __c_logger_log_stack_trace(logger_verbose_debug, logging_get_caller_address(), \
-//                             __FUNCTION__, __FILE__, __LINE__)
-//#define LOG_STACKTRACE_INFO                                                     \
-//  __c_logger_log_stack_trace(logger_verbose_info, logging_get_caller_address(), \
-//                             __FUNCTION__, __FILE__, __LINE__)
-//#define LOG_STACKTRACE_WARNING                                                     \
-//  __c_logger_log_stack_trace(logger_verbose_warning, logging_get_caller_address(), \
-//                             __FUNCTION__, __FILE__, __LINE__)
-//#define LOG_STACKTRACE_ERROR                                                     \
-//  __c_logger_log_stack_trace(logger_verbose_error, logging_get_caller_address(), \
-//                             __FUNCTION__, __FILE__, __LINE__)
-//#define LOG_STACKTRACE_FATAL                                                     \
-//  __c_logger_log_stack_trace(logger_verbose_fatal, logging_get_caller_address(), \
-//                             __FUNCTION__, __FILE__, __LINE__)
-//
-//#else  // LOG_AUTO_DEBUGGING
-//
-//#define LOG_STACKTRACE_DEBUG
-//#define LOG_STACKTRACE_INFO
-//#define LOG_STACKTRACE_WARNING
-//#define LOG_STACKTRACE_ERROR
-//#define LOG_STACKTRACE_FATAL
-//
-//#endif  // LOG_AUTO_DEBUGGING
 
 
 #endif /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/

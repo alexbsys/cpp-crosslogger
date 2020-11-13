@@ -129,8 +129,6 @@ public:
   }
 
 
-
-#if LOG_CREATE_DIRECTORY
   static int do_mkdir(const char* path, mode_t mode) {
     struct stat st;
     int status = 0;
@@ -168,9 +166,6 @@ public:
     free(copypath);
     return (status);
   }
-
-#endif  // LOG_CREATE_DIRECTORY
-
 
 #endif  //LOG_PLATFORM_WINDOWS
 

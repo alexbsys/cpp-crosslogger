@@ -330,12 +330,16 @@ private:
     std::string text = hdr + std::string(" ") + what + std::string("\n");
 
     // call registered outputs
-    for (std::list<plugin_data>::const_iterator it = plugins_.at(kLogPluginTypeOutput).cbegin();
-      it != plugins_.at(kLogPluginTypeOutput).cend(); it++) {
-      logger_output_plugin_interface* output_plugin = dynamic_cast<logger_output_plugin_interface*>(it->plugin_);
-      if (output_plugin)
-        output_plugin->write(verb_level, hdr, what);
+    std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
+    plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
+
+    // call registered outputs
+    for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
+      it != output_plugins.cend(); it++) {
+      (*it)->write(verb_level, hdr, what);
     }
+
+
     /*
 #if LOG_ANDROID_SYSLOG
     __android_log_write(ANDROID_LOG_INFO, "LOGGER", text.c_str());

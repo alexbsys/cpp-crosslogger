@@ -70,11 +70,6 @@
 #define LOG_REGISTRY_DEFAULT_KEY "HKCU\\Software\\$(EXEFILENAME)\\Logging"
 #endif  // LOG_REGISTRY_DEFAULT_KEY
 
-/// Create directory for Log
-#ifndef LOG_CREATE_DIRECTORY
-#define LOG_CREATE_DIRECTORY 1
-#endif  // LOG_CREATE_DIRECTORY
-
 /// Enable using RTTI in Log
 #ifndef LOG_RTTI_ENABLED
 #define LOG_RTTI_ENABLED 1

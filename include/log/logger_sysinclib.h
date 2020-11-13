@@ -14,9 +14,6 @@
 #define LOG_INCLUDE_DBGHELP 1
 #endif  //(LOG_AUTO_DEBUGGING || LOG_UNHANDLED_EXCEPTIONS) && !INCLUDE_DBGHELP
 
-
-//#if defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
-
 #ifdef LOG_COMPILER_MSVC
 #pragma warning(disable : 4996)
 #endif  // LOG_COMPILER_MSVC
@@ -43,10 +40,6 @@
 #if LOG_RTTI_ENABLED
 #include <typeinfo>
 #endif  // LOG_RTTI_ENABLED
-
-//#if LOG_INI_CONFIGURATION
-//#include <ctype.h>
-//#endif  // LOG_INI_CONFIGURATION
 
 #if LOG_CHECKED
 #include <assert.h>
@@ -138,7 +131,5 @@
 //#endif /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
 
 ////////////////////////////// Includes and libs END //////////////////////////////
-
-
 
 #endif /*LOGGER_SYSTEM_INCLUDES_AND_LIBRARIES_HEADER*/

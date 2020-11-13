@@ -15,7 +15,7 @@
 #endif //LOG_PLATFORM_WINDOWS
 
 /// !!!! Need to define once in one of cpp file (if logger.cpp was not used)
-DEFINE_LOGGER();
+DEFINE_LOGGER(NULL);
 
 
 
@@ -88,6 +88,7 @@ void example_log_sourcefile_linenumbers() {
 void example_shared_log_feature(int rounds)
 {
 	logging::singleton<logging::logger_interface, logging::detail::logger> _logger1( 
+    NULL,
 		&logging::logger_interface::ref, &logging::logger_interface::deref, &logging::logger_interface::ref_counter, 
 		(logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), false); 
 
