@@ -27,6 +27,10 @@
 #define LOG_FMT_U64 "%llu"
 #endif  // LOG_COMPILER_MSVC
 
+#ifdef LOG_COMPILER_MSVC
+#pragma warning(disable : 4996 4091)
+#endif /*LOG_COMPILER_MSVC*/
+
 #ifdef LOG_CPP_X11
 #  define LOG_METHOD_OVERRIDE  override
 #else /*LOG_CPP_X11*/

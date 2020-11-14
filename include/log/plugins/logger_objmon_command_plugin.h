@@ -2,14 +2,14 @@
 #ifndef LOGGER_OBJMON_HEADER
 #define LOGGER_OBJMON_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_sysinclib.h>
 
-#include "logger_interfaces.h"
-#include "logger_strutils.h"
-#include "logger_sysinclib.h"
-#include "logger_mt.h"
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_mt.h>
 
 #include <sstream>
 #include <map>

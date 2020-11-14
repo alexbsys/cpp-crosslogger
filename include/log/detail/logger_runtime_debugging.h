@@ -2,15 +2,15 @@
 #ifndef LOGGER_RUNTIME_DEBUGGING_HEADER
 #define LOGGER_RUNTIME_DEBUGGING_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_sysinclib.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_sysinclib.h>
 
-#include "logger_strutils.h"
-#include "logger_utils.h"
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_utils.h>
 
 #if LOG_USE_MODULEDEFINITION
-#include "logger_moddef.h"
+#include <log/detail/logger_moddef.h>
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 #if defined(LOG_PLATFORM_WINDOWS)
@@ -54,7 +54,6 @@ private:
     symSearchPath << utils::get_process_file_path() << ";";
     symSearchPath << utils::get_process_file_path() << PdbCurrDir << ";";
 
-//    std::string config_sym_path = _logger->get_config_param("runtime_debugging::SymPath");
     if (config_sym_path.size()) {
       symSearchPath << config_sym_path << ";";
       symSearchPath << config_sym_path << PdbCurrDir << ";";
@@ -459,16 +458,10 @@ public:
 
     return result;
   }
-
 #endif  // defined(LOG_PLATFORM_WINDOWS)
 };
 
-
-
-
-
 }//namespace detail
 }//namespace logging
-
 
 #endif /*LOGGER_RUNTIME_DEBUGGING_HEADER*/

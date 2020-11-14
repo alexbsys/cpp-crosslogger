@@ -2,9 +2,9 @@
 #ifndef LOGGER_MODULES_COMMAND_PLUGIN
 #define LOGGER_MODULES_COMMAND_PLUGIN
 
-#include "logger_interfaces.h"
-#include "logger_strutils.h"
-#include "logger_moddef.h"
+#include <log/logger_interfaces.h>
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_moddef.h>
 
 #include <sstream>
 

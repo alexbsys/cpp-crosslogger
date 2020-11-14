@@ -82,11 +82,9 @@
 #include "logger_interfaces.h"
 #include "logger_shared_ptr.hpp"
 
-#include "logger_cfgfn.h"
-#include "logger_utils.h"
-
+#include "logger_cfg.h"
 #include "logger_singleton.h"
-#include "logger_impl.h"
+#include <log/detail/logger_impl.h>
 
 namespace logging {
 extern logger_singleton_interface<logger_interface>* _logger;

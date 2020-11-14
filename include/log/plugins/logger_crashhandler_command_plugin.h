@@ -2,20 +2,19 @@
 #ifndef LOGGER_CRASHHANDLER_COMMAND_PLUGIN
 #define LOGGER_CRASHHANDLER_COMMAND_PLUGIN
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_sysinclib.h"
-#include "logger_interfaces.h"
-#include "logger_runtime_debugging.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_sysinclib.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_userdefs.h>
+#include <log/logger_verbose.h>
 
-#include "logger_verbose.h"
+#include <log/detail/logger_runtime_debugging.h>
 
 #if LOG_SHARED
-#include "logger_shmem.h"
+#include <log/detail/logger_shmem.h>
 #endif /*LOG_SHARED*/
-
-#include "logger_userdefs.h"
 
 namespace logging {
 

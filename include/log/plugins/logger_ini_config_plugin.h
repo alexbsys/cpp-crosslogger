@@ -2,15 +2,14 @@
 #define LOGGER_INI_CONFIG_PLUGIN_HEADER
 
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_interfaces.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
 
-#include "logger_strutils.h"
-#include "logger_cfgfn.h"
-
-#include "logger_ini_parser.h"
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_cfgfn.h>
+#include <log/detail/logger_ini_parser.h>
 
 #include <vector>
 
@@ -28,8 +27,6 @@ public:
   const char* name() const { return plugin_name_.c_str(); }
 
   bool reload(cfg::KeyValueTypeList& config) {
-#if LOG_INI_CONFIGURATION
-
     using namespace detail::ini_parser;
 
     const std::string& ini_file_paths = detail::cfg::get_logcfg_string(config, type(), name(), "IniFilePaths", ".");
@@ -47,7 +44,6 @@ public:
         break;
       }
     }
-#endif /*LOG_INI_CONFIGURATION*/
     return true;
   }
 protected:

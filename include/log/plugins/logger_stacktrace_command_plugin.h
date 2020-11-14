@@ -2,10 +2,10 @@
 #ifndef LOGGER_STACKTRACE_COMMAND_PLUGIN
 #define LOGGER_STACKTRACE_COMMAND_PLUGIN
 
-#include "logger_interfaces.h"
-#include "logger_strutils.h"
-#include "logger_runtime_debugging.h"
-#include "logger_cfgfn.h"
+#include <log/logger_interfaces.h>
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_runtime_debugging.h>
+#include <log/detail/logger_cfgfn.h>
 
 #include <sstream>
 

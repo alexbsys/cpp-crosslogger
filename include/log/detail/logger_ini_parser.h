@@ -2,7 +2,7 @@
 #ifndef LOGGER_INI_PARSER_HEADER
 #define LOGGER_INI_PARSER_HEADER
 
-#include "logger_config.h"
+#include <log/logger_config.h>
 
 #include <string.h>
 #include <ctype.h>

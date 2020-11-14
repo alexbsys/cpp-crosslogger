@@ -7,23 +7,18 @@
 #	define LOG_USE_MODULEDEFINITION 0
 #	define LOG_AUTO_DEBUGGING 0
 #	define LOG_UNHANDLED_EXCEPTIONS 0
-#	define LOG_CONFIGURE_FROM_REGISTRY 0
-#	define LOG_INI_CONFIGURATION 0
-#	define LOG_CREATE_DIRECTORY 0
 #	define LOG_RTTI_ENABLED 0
 #	define LOG_SHARED 0
 #	define LOG_COMPILER_WARNINGS 1
 #	define LOG_USE_DLL 0
 #	define LOG_MULTITHREADED 0
-#	define LOG_FLUSH_FILE_EVERY_WRITE 0
 #	define LOG_CHECKED 1
 #	define LOG_USE_MACRO_HEADER_CACHE 1
 #	define LOG_PROCESS_MACRO_IN_LOG_TEXT 1
-#	define LOG_TEST_DO_NOT_WRITE_FILE 0
 #	define LOG_RELEASE_ON_APP_CRASH 1
 
 #include "log/logger.h"
-#include "log/logger_register_builtin_plugin.h"
+#include "log/plugins/logger_register_builtin_plugin.h"
 
 DEFINE_LOGGER(NULL);
 

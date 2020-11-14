@@ -21,9 +21,9 @@ xprintf("%lld", 1234567812345678LL); "1234567812345678"
 #ifndef LOGGER_XPRINTF_HEADER
 #define LOGGER_XPRINTF_HEADER
 
-#include "logger_config.h"
-#include "logger_pdefs.h"
-#include "logger_varargs.h"
+#include <log/logger_config.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_varargs.h>
 
 /** Support for %lld  */
 #define LOG_OWN_VSNPRINTF_INT64_SUPPORT   1

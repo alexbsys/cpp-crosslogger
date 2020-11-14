@@ -22,8 +22,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "logger_dll", "src\logger_dl
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sample_c_dll_host", "examples\sample_c_dll_host\sample_c_dll_host.vcxproj", "{21DEE22D-B730-4C41-9A0D-A49A8152AD6E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C67966E7-3267-4E94-89E1-7C321EA486A2} = {C67966E7-3267-4E94-89E1-7C321EA486A2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sample_cpp_dll_host", "examples\sample_cpp_dll_host\sample_cpp_dll_host.vcxproj", "{8CB7BF3D-C86E-4674-AEA8-B670B89BC94F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C67966E7-3267-4E94-89E1-7C321EA486A2} = {C67966E7-3267-4E94-89E1-7C321EA486A2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sample_cpp_nodll_nohost", "examples\sample_cpp_nodll_nohost\sample_cpp_nodll_nohost.vcxproj", "{86C23CC7-394D-443C-9FF2-8D46CC8D952B}"
 EndProject

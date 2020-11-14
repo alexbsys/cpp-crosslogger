@@ -2,8 +2,8 @@
 #ifndef LOGGER_BINARY_COMMAND_PLUGIN
 #define LOGGER_BINARY_COMMAND_PLUGIN
 
-#include "logger_interfaces.h"
-#include "logger_strutils.h"
+#include <log/logger_interfaces.h>
+#include <log/detail/logger_strutils.h>
 #include <sstream>
 
 namespace logging {

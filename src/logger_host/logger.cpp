@@ -14,7 +14,7 @@
 // DO NOT ADD BOTH LOGGER.CPP AND LOGGERDLL.C
 
 #include <log/logger.h>
-#include <log/logger_register_builtin_plugin.h>
+#include <log/plugins/logger_register_builtin_plugin.h>
 
 #if !LOG_USE_DLL || defined(LOG_THIS_IS_DLL)
 

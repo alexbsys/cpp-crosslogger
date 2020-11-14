@@ -370,14 +370,6 @@
 #endif  // LOG_USE_OBJMON
 
 
-
-#if LOG_UNHANDLED_EXCEPTIONS && defined(LOG_PLATFORM_WINDOWS)
-#  define DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS \
-  void* logging::unhandled_exceptions_processor::prev_exception_filter_ = NULL;
-#else  // LOG_UNHANDLED_EXCEPTIONS && defined(LOG_PLATFORM_WINDOWS)
-#  define DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
-#endif  // LOG_UNHANDLED_EXCEPTIONS && defined(LOG_PLATFORM_WINDOWS)
-
 // Logger instance definition macro
 #if LOG_SHARED
 #  define DEFINE_LOGGER(on_create_fn)                                                 \
@@ -389,8 +381,6 @@
       &logging::logger_interface::ref_counter,                                     \
       (logging::logger_interface*)logging::detail::shared_obj::try_find_shared_object(0), \
       false))
-
-//DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
 #else  // LOG_SHARED
 #  define DEFINE_LOGGER(on_create_fn)                                                              \
     logging::logger_singleton_interface<logging::logger_interface>* logging::_logger( \
@@ -402,8 +392,6 @@
       NULL, \
       false))
 
-
-//DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
 #endif  // LOG_SHARED
 
 #else /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/

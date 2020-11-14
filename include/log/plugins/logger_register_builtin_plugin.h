@@ -2,8 +2,8 @@
 #ifndef LOGGER_REGISTER_BUILTIN_PLUGIN
 #define LOGGER_REGISTER_BUILTIN_PLUGIN
 
-#include "logger_config.h"
-#include "logger_interfaces.h"
+#include <log/logger_config.h>
+#include <log/logger_interfaces.h>
 #include <sstream>
 
 #include "logger_ini_config_plugin.h"

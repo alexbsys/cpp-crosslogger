@@ -4,16 +4,14 @@
 
 #include "logger_config.h"
 #include "logger_pdefs.h"
-#include "logger_cfgfn.h"
+#include "logger_cfg.h"
 #include "logger_get_caller_addr.h"
 #include "logger_shared_ptr.hpp"
 #include <string>
 
 namespace logging {
 
-namespace detail {
-  class log_stream;
-}//namespace detail
+class log_stream;
 
 struct logger_interface;
 
@@ -66,7 +64,7 @@ struct logger_plugin_factory_interface {
 
   virtual int plugin_type() const { return kLogPluginTypeInvalid; }
   virtual const char* type() const { return ""; }
-  virtual logging::detail::shared_ptr<logger_plugin_interface> create(const char* name) = 0;
+  virtual logging::shared_ptr<logger_plugin_interface> create(const char* name) = 0;
 //  virtual void destroy(logger_plugin_interface* plugin_interface) = 0;
 };
 
@@ -82,8 +80,8 @@ public:
   const char* type() const { return plugin_type_name_.c_str(); }
   int plugin_type() const { return plugin_type_; }
 
-  virtual logging::detail::shared_ptr<logger_plugin_interface> create(const char* name) LOG_METHOD_OVERRIDE {
-    return logging::detail::shared_ptr<logger_plugin_interface>(new T(name));
+  virtual logging::shared_ptr<logger_plugin_interface> create(const char* name) LOG_METHOD_OVERRIDE {
+    return logging::shared_ptr<logger_plugin_interface>(new T(name));
   }
 
 private:
@@ -186,7 +184,7 @@ struct logger_interface {
     const char* source_file, int line_number, const void* vparam, int iparam, ...) = 0;
 
   /** Logger C++ stream interface implementation */
-  virtual detail::log_stream stream(int verb_level, void* addr, const char* function_name,
+  virtual log_stream stream(int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number) = 0;
 
   /** Flush all outputs */

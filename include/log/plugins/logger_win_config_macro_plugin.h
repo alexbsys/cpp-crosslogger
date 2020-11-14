@@ -1,16 +1,15 @@
 #ifndef LOGGER_WIN_CONFIG_MACRO_PLUGIN
 #define LOGGER_WIN_CONFIG_MACRO_PLUGIN
 
-
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_interfaces.h"
-#include "logger_strutils.h"
-#include "logger_utils.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_utils.h>
 
 #if LOG_USE_MODULEDEFINITION
-#include "logger_moddef.h"
+#include <log/detail/logger_moddef.h>
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 #define LOGGER_HAVE_BUILTIN_WIN_CONFIG_MACRO_PLUGIN  1

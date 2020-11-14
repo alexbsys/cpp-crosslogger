@@ -45,6 +45,7 @@ extern void(LOG_CDECL* __c_logger_flush)(void* logobj);
 
 extern unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj);
 
+extern int(LOG_CDECL* c_logger_is_master)(void* logobj);
 
 #else  /* LOG_USE_DLL && !LOG_THIS_IS_DLL */
 void __c_logger_log(void* logobj, int verbose_level, void* caller_addr, const char* function,

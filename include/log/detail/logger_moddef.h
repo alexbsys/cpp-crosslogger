@@ -2,9 +2,9 @@
 #ifndef LOGGER_MODULE_DEFINITION_HEADER
 #define LOGGER_MODULE_DEFINITION_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_sysinclib.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_sysinclib.h>
 
 ////////////////////  Module Definition components  ////////////////////
 

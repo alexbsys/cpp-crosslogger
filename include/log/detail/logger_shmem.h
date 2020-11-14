@@ -5,10 +5,10 @@
 #ifndef LOGGER_SHARED_MEMORY_HEADER
 #define LOGGER_SHARED_MEMORY_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_sysinclib.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_sysinclib.h>
 
 #if LOG_SHARED && !defined(LOG_PLATFORM_WINDOWS)
 #include <sys/mman.h>

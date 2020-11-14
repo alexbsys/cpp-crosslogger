@@ -5,10 +5,10 @@
 #ifndef LOGGER_MULTITHREAD_HEADER
 #define LOGGER_MULTITHREAD_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_sysinclib.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_sysinclib.h>
 
 #ifdef LOG_CPP_X11
 #include <thread>

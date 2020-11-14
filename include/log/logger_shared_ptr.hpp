@@ -18,7 +18,6 @@
 #define SHARED_ASSERT(x)    assert(x)
 
 namespace logging {
-namespace detail {
 
 /**
  * @brief implementation of reference counter for the following minimal smart pointer.
@@ -286,7 +285,6 @@ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& ptr) // never throws
     }
 }
 
-}//namespace detail
 }//namespace logging
 
 #endif /*LOGGER_SHARED_PTR*/

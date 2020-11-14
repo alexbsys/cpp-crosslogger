@@ -47,17 +47,6 @@
 #define LOG_UNHANDLED_EXCEPTIONS 1
 #endif  // LOG_UNHANDLED_EXCEPTIONS
 
-/// Configure Log from registry. Registry parameters are more priority that configuration
-/// from program Registry path must be configured before first access to Log
-#ifndef LOG_CONFIGURE_FROM_REGISTRY
-#define LOG_CONFIGURE_FROM_REGISTRY 0
-#endif  // LOG_CONFIGURE_FROM_REGISTRY
-
-/// Enable configuration from INI file
-#ifndef LOG_INI_CONFIGURATION
-#define LOG_INI_CONFIGURATION 1
-#endif  // LOG_INI_CONFIGURATION
-
 /// Paths which will be used for find INI file. First defined paths are more prioritized
 #ifndef LOG_DEFAULT_INI_PATHS
 #define LOG_DEFAULT_INI_PATHS                                                    \
@@ -131,12 +120,6 @@
 #define LOG_OWN_VSNPRINTF_CR_CRLF 0
 #endif //LOG_USE_OWN_VSNPRINTF
 
-/// Open and close file at each write. Causes more stable writes on crashes but can
-/// produce performance issue
-#ifndef LOG_FLUSH_FILE_EVERY_WRITE
-#define LOG_FLUSH_FILE_EVERY_WRITE 0
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-
 /// Use debug macro and mechanisms in log
 #ifndef LOG_CHECKED
 #define LOG_CHECKED 1
@@ -168,7 +151,7 @@
 /// load-unload DLLs, maybe you need to turn off modules cache
 #ifndef LOG_USE_MODULES_CACHE
 #define LOG_USE_MODULES_CACHE 1
-#endif  // LOG_RELEASE_ON_APP_CRASH
+#endif  // LOG_USE_MODULES_CACHE
 
 /// Cache headers macro. Turned on by default. Turn off if you have problems with macro
 /// header format
@@ -180,12 +163,6 @@
 #ifndef LOG_PROCESS_MACRO_IN_LOG_TEXT
 #define LOG_PROCESS_MACRO_IN_LOG_TEXT 0
 #endif  // LOG_PROCESS_MACRO_IN_LOG_TEXT
-
-/// Log works but does not create or write to file. Used only for performance analysis, do
-/// not use in real applications!
-#ifndef LOG_TEST_DO_NOT_WRITE_FILE
-#define LOG_TEST_DO_NOT_WRITE_FILE 0
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
 
 /// Use SEH. Windows only
 #ifndef LOG_USE_SEH

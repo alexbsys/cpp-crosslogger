@@ -2,15 +2,14 @@
 #ifndef LOGGER_WIN_REGISTRY_CONFIG_PLUGIN_HEADER
 #define LOGGER_WIN_REGISTRY_CONFIG_PLUGIN_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_interfaces.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
 
-#include "logger_strutils.h"
-#include "logger_cfgfn.h"
-
-#include "logger_win_registry.h"
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_cfgfn.h>
+#include <log/detail/logger_win_registry.h>
 
 #include <vector>
 

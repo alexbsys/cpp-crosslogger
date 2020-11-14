@@ -3,7 +3,7 @@
 #ifndef LOGGER_STRING_UTILS_HEADER
 #define LOGGER_STRING_UTILS_HEADER
 
-#include "logger_config.h"
+#include <log/logger_config.h>
 #include <string>
 #include <vector>
 

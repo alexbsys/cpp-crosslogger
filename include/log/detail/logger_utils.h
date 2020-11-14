@@ -1,9 +1,9 @@
 #ifndef LOGGER_UTILS_HEADER
 #define LOGGER_UTILS_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_sysinclib.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_sysinclib.h>
 
 namespace logging {
 namespace detail {

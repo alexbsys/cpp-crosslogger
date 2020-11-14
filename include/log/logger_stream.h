@@ -9,7 +9,6 @@
 #include <sstream>
 
 namespace logging {
-namespace detail {
 
 class log_stream {
 public:
@@ -55,7 +54,6 @@ private:
   int line_number_;
 };
 
-}//namespace detail
 }//namespace logging
 
 #endif /*LOGGER_STREAM_HEADER*/

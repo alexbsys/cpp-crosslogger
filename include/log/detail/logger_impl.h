@@ -33,13 +33,6 @@
 #include "logger_moddef.h"
 #endif /*LOG_USE_MODULEDEFINITION*/
 
-
-#if LOG_TEST_DO_NOT_WRITE_FILE
-#include <sstream>
-#undef LOG_FLUSH_FILE_EVERY_WRITE
-#define LOG_FLUSH_FILE_EVERY_WRITE 1l
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
-
 namespace logging {
 namespace detail {
 
@@ -163,7 +156,7 @@ class logger : public logger_interface {
 
   log_config log_config_;
 
-  std::map<int, logging::detail::shared_ptr<logger_plugin_interface> > cmd_refs_;
+  std::map<int, logging::shared_ptr<logger_plugin_interface> > cmd_refs_;
   plugin_manager* plugin_mgr_;
 
   mt::atomic_long_type ref_counter_;
@@ -338,28 +331,6 @@ private:
       it != output_plugins.cend(); it++) {
       (*it)->write(verb_level, hdr, what);
     }
-
-
-    /*
-#if LOG_ANDROID_SYSLOG
-    __android_log_write(ANDROID_LOG_INFO, "LOGGER", text.c_str());
-#else  // LOG_ANDROID_SYSLOG
-
-#if LOG_FLUSH_FILE_EVERY_WRITE
-#if !LOG_TEST_DO_NOT_WRITE_FILE
-    std::ofstream stream(configurator.get_full_log_file_path().c_str(), std::ios::app);
-    stream << what;
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
-#else   // LOG_FLUSH_FILE_EVERY_WRITE
-    if (!stream_.is_open())
-      stream_.open(configurator.get_full_log_file_path().c_str(), std::ios::app);
-
-    stream_ << text;
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
-#endif  // LOG_ANDROID_SYSLOG
-
-    cur_file_size_ += static_cast<int>(what.size());
-    */
   }
 #endif  // LOG_MULTITHREADED
 
@@ -396,7 +367,7 @@ private:
 
 
   template<typename TCmdPlugin>
-  void register_command_plugin(logging::detail::shared_ptr<TCmdPlugin> cmd_plugin) {
+  void register_command_plugin(logging::shared_ptr<TCmdPlugin> cmd_plugin) {
     const int kMaxCmdsPerPlugin = 32;
 
     int cmd_ids[kMaxCmdsPerPlugin];
@@ -600,6 +571,12 @@ private:
    * \brief    Load plugins from load section in specified config list
    * \param    Config values list
    * \return   Count of new modules load
+   * \detail   Logger will load plugins from parameter 'logger::LoadPlugins = plugin1 plugin2 plugin3:plug3name1', etc.
+   *           or from section 'load': 'load:plugin1=1', 'load:plugin1:plug1name=1' (values can be any), etc.
+   *           Formula for logger::LoadPlugins is  plugin_type:plugin_name or plugin_type for create plugin without name (default).
+   *           Formula for load:  load:plugin_type:plugin_name or load:plugin_type for create plugin without name (default).
+   *           If plugin has been loaded already, nothing happens.
+   * \note     Currently on plugin creation error it is no reaction: user will be not notified. Need some channel for user notification
    */
   int load_plugins_from_config(const cfg::KeyValueTypeList& config) {
     const std::string kConfigLoggerSectionName = "logger";
@@ -641,15 +618,15 @@ private:
 
     // process [load] section
     for (cfg::KeyValueTypeList::const_iterator it = config.cbegin(); it != config.cend(); it++) {
-      const std::string load_prefix = "load:";
+      const std::string kPluginLoadSectionPrefix = "load:";
 
-      if (!str::starts_with(it->first, load_prefix))
+      if (!str::starts_with(it->first, kPluginLoadSectionPrefix))
         continue;
 
       if (atoi(it->second.c_str()) == 0)
         continue; // do not load
 
-      std::string key_name = it->first.substr(load_prefix.size());
+      std::string key_name = it->first.substr(kPluginLoadSectionPrefix.size());
 
       std::string key;
       std::string name;
@@ -672,6 +649,8 @@ private:
       if (new_plugin) {
         new_plugins.push_back(new_plugin);
         ++modules_loaded;
+      } else {
+        //TODO: notify user that plugin cannot be loaded
       }
     }
 

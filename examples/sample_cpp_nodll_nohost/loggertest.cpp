@@ -11,7 +11,7 @@
 #include <log/logger_objmon_command_plugin.h>
 #include <log/logger_win_registry_config_plugin.h>
 */
-#include <log/logger_register_builtin_plugin.h>
+#include <log/plugins/logger_register_builtin_plugin.h>
 
 #include <log/logger.h>
 #include <fstream>

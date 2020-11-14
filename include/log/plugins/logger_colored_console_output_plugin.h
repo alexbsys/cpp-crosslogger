@@ -1,16 +1,15 @@
 #ifndef LOGGER_COLORED_CONSOLE_OUTPUT_PLUGIN_HEADER
 #define LOGGER_COLORED_CONSOLE_OUTPUT_PLUGIN_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_sysinclib.h>
+#include <log/logger_verbose.h>
 
-#include "logger_interfaces.h"
-
-#include "logger_utils.h"
-#include "logger_cfgfn.h"
-#include "logger_sysinclib.h"
-#include "logger_verbose.h"
+#include <log/detail/logger_utils.h>
+#include <log/detail/logger_cfgfn.h>
 
 #define LOGGER_HAVE_COLORED_CONSOLE_OUTPUT_PLUGIN  1
 

@@ -3,15 +3,14 @@
 #ifndef LOGGER_SCROLL_FILE_OUTPUT_PLUGIN_HEADER
 #define LOGGER_SCROLL_FILE_OUTPUT_PLUGIN_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_verbose.h>
 
-#include "logger_interfaces.h"
-
-#include "logger_utils.h"
-#include "logger_cfgfn.h"
-#include "logger_verbose.h"
+#include <log/detail/logger_utils.h>
+#include <log/detail/logger_cfgfn.h>
 
 #include <fstream>
 
@@ -68,7 +67,7 @@ public:
   * \brief    write method. Called every write to file operation
   */
   virtual void write(int verb_level, const std::string& hdr, const std::string& what) LOG_METHOD_OVERRIDE {
-    if (verb_level & config_.verbose_level_ == 0)
+    if ((verb_level & config_.verbose_level_) == 0)
       return;
 
     if (!stream_.is_open())
@@ -87,21 +86,10 @@ public:
 
     cur_file_size_ += static_cast<int>(str.size());
 
-
 #if LOG_ANDROID_SYSLOG
     __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
 #else  // LOG_ANDROID_SYSLOG
-#if LOG_FLUSH_FILE_EVERY_WRITE
-#if !LOG_TEST_DO_NOT_WRITE_FILE
-    {
-      std::ofstream stream(configurator.get_full_log_file_path().c_str(),
-        std::ios::app);
-      stream << str;
-    }
-#endif  // LOG_TEST_DO_NOT_WRITE_FILE
-#else   // LOG_FLUSH_FILE_EVERY_WRITE
     stream_ << str;
-#endif  // LOG_FLUSH_FILE_EVERY_WRITE
 #endif  // LOG_ANDROID_SYSLOG
 
     if (config_.flush_every_write_) {

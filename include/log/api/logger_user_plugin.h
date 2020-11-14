@@ -101,15 +101,15 @@ public:
 
   virtual ~logger_user_command_plugin_factory() LOG_METHOD_OVERRIDE {}
 
-  virtual logging::detail::shared_ptr<logger_plugin_interface> create(const char* name) LOG_METHOD_OVERRIDE {
+  virtual logging::shared_ptr<logger_plugin_interface> create(const char* name) LOG_METHOD_OVERRIDE {
     if (!callbacks_.plugin_create_callback)
-      return logging::detail::shared_ptr<logger_plugin_interface>();
+      return logging::shared_ptr<logger_plugin_interface>();
 
     void* plugin_obj = callbacks_.plugin_create_callback();
     if (!plugin_obj)
-      return logging::detail::shared_ptr<logger_plugin_interface>();
+      return logging::shared_ptr<logger_plugin_interface>();
 
-    return logging::detail::shared_ptr<logger_plugin_interface>(
+    return logging::shared_ptr<logger_plugin_interface>(
       new logger_user_command_plugin(plugin_obj, name, type(), cmds_ids_, callbacks_));
   }
 

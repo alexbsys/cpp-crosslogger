@@ -6,14 +6,9 @@
 #include <list>
 #include <stdlib.h>
 
+#include <log/logger_cfg.h>
+
 namespace logging {
-
-namespace cfg {
-  typedef std::pair<std::string, std::string> KeyValueType;
-  typedef std::list<KeyValueType> KeyValueTypeList;
-}//namespace cfg
-
-
 namespace detail {
 namespace cfg {
   using namespace logging::cfg;
@@ -28,7 +23,8 @@ namespace cfg {
     bool* is_found = nullptr) {
     if (is_found) *is_found = false;
 
-    for (const KeyValueType& param : params) {
+    for (KeyValueTypeList::const_iterator it = params.cbegin(); it != params.cend(); it++) {
+      const KeyValueType& param = *it;
       if (param.first == param_name) {
         if (is_found) *is_found = true;
         return param.second;
@@ -47,7 +43,9 @@ namespace cfg {
     if (is_found) *is_found = false;
     if (prev_value) *prev_value = std::string();
 
-    for (KeyValueType& param : params) {
+    for (KeyValueTypeList::iterator it = params.begin(); it != params.end(); it++) {
+      KeyValueType& param = *it;
+
       if (param.first == param_name) {
         if (is_found) *is_found = true;
         if (prev_value) *prev_value = param.second;
@@ -64,7 +62,9 @@ namespace cfg {
   static bool has_value(
     const KeyValueTypeList& params,
     const std::string& param_name) {
-    for (const KeyValueType& param : params) {
+
+    for (KeyValueTypeList::const_iterator it = params.cbegin(); it != params.cend(); it++) {
+      const KeyValueType& param = *it;
       if (param.first == param_name)
         return true;
     }
@@ -76,7 +76,8 @@ namespace cfg {
     const std::string& param_name) {
     size_t count = 0;
 
-    for (const KeyValueType& param : params) {
+    for (KeyValueTypeList::const_iterator it = params.cbegin(); it != params.cend(); it++) {
+      const KeyValueType& param = *it;
       if (param.first == param_name)
         ++count;
     }

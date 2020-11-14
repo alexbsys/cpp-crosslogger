@@ -129,20 +129,6 @@
 #endif  // LOG_COMPILER_WARNINGS
 #endif  // LOG_RELEASE_ON_APP_CRASH && !LOG_UNHANDLED_EXCEPTIONS
 
-#if LOG_UNHANDLED_EXCEPTIONS && !LOG_FLUSH_FILE_EVERY_WRITE && !LOG_RELEASE_ON_APP_CRASH
-#if LOG_COMPILER_WARNINGS
-
-#ifdef LOG_COMPILER_MSVC
-#pragma message( \
-    "LOGGER: Log configuration issue. LOG_FLUSH_FILE_EVERY_WRITE is unset and LOG_RELEASE_ON_APP_CRASH is unset. You can obtain corrupted log file if process will crash")
-#else  // LOG_COMPILER_MSVC
-#warning("LOGGER: Log configuration issue. LOG_FLUSH_FILE_EVERY_WRITE is unset and LOG_RELEASE_ON_APP_CRASH is unset. You can obtain corrupted log file if process will crash")
-#endif  // LOG_COMPILER_MSVC
-
-#endif  // LOG_COMPILER_WARNINGS
-#endif  // LOG_UNHANDLED_EXCEPTIONS && !LOG_FLUSH_FILE_EVERY_WRITE &&
-// !LOG_RELEASE_ON_APP_CRASH
-
 #if defined(LOG_PLATFORM_WINDOWS) && LOG_USE_SEH && !defined(LOG_COMPILER_MSVC)
 #if LOG_COMPILER_WARNINGS
 #warning("LOGGER: LOG_USE_SEH can be used only with Microsoft Visual C++ compiler")
