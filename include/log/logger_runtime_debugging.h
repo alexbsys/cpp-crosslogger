@@ -8,7 +8,10 @@
 
 #include "logger_strutils.h"
 #include "logger_utils.h"
+
+#if LOG_USE_MODULEDEFINITION
 #include "logger_moddef.h"
+#endif /*LOG_USE_MODULEDEFINITION*/
 
 #if defined(LOG_PLATFORM_WINDOWS)
 
@@ -111,14 +114,17 @@ private:
       symOptions &= ~SYMOPT_DEFERRED_LOADS;
       SymSetOptions(symOptions);
 
+#if LOG_USE_MODULEDEFINITION
       std::list<module_entry_t> modules;
       module_definition::query_module_list(modules);
       load_modules_pdbs(modules);
+#endif /*LOG_USE_MODULEDEFINITION*/
 
       isFirstTime = FALSE;
     }
   }
 
+#if LOG_USE_MODULEDEFINITION
   static void load_modules_pdbs(const std::list<module_entry_t>& modules) {
     for (std::list<module_entry_t>::const_iterator it = modules.begin();
       it != modules.end(); ++it) {
@@ -126,6 +132,7 @@ private:
         it->base_address, it->size);
     }
   }
+#endif /*LOG_USE_MODULEDEFINITION*/
 
 public:
   static const char* get_system_expection_code_text(unsigned long exceptionCode) {

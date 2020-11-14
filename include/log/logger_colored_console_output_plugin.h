@@ -59,7 +59,7 @@ public:
     if (hdr.size()) str.append(" ");
     str += what + std::string("\n");
 
-    printf("%s\n", str.c_str());
+    printf("%s", str.c_str());
     set_console_text_color(default_color);
   }
 

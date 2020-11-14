@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
 //	LOG_SET_REG_CONFIG_PATH("HKCU\\Software\\Logtest");
 //	Logging::Configurator.SetLogFileName(logging::Utils::GetApplicationFileName());
 
-  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "register_builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config console_output");
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config console_output");
 
 #ifdef LOG_PLATFORM_WINDOWS
 	start_ms = GetTickCount();

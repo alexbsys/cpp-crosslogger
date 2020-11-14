@@ -107,9 +107,6 @@
     <ClInclude Include="..\..\include\log\logger_exception_command_plugin.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\log\logger_verbose.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\log\logger_userdefs.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
@@ -153,6 +150,9 @@
       <Filter>Header Files\log</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\log\logger_colored_console_output_plugin.h">
+      <Filter>Header Files\log</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\log\logger_verbose.h">
       <Filter>Header Files\log</Filter>
     </ClInclude>
   </ItemGroup>

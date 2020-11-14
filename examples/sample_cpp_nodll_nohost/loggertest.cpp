@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
 //  LOG_ATTACH_PLUGIN(new LogToConsole());
 //  logging::_logger->attach_plugin(new logging::detail::logger_file_output());
 
-  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "register_builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config console_output");
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro ini_config modules_cmd stacktrace_cmd binary_cmd crashhandler_cmd objmon_cmd win_registry_config console_output");
   LOG_SET_CONFIG_PARAM("IniFilePaths", LOG_DEFAULT_INI_PATHS);
   LOG_SET_CONFIG_PARAM("logger::RegistryConfigPath", "HKCU\\Software\\Test");
 

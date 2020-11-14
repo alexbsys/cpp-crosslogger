@@ -8,6 +8,7 @@
 #include "logger_sysinclib.h"
 #include "logger_interfaces.h"
 #include "logger_runtime_debugging.h"
+
 #include "logger_verbose.h"
 
 #if LOG_SHARED

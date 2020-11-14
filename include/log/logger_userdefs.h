@@ -392,9 +392,18 @@
 
 //DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
 #else  // LOG_SHARED
-#  define DEFINE_LOGGER()                                                              \
-    logging::singleton<logging::logger_interface, logging::detail::logger> logging::_logger; \
-    DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
+#  define DEFINE_LOGGER(on_create_fn)                                                              \
+    logging::logger_singleton_interface<logging::logger_interface>* logging::_logger( \
+    new logging::singleton<logging::logger_interface, logging::detail::logger>( \
+      (on_create_fn), \
+      &logging::logger_interface::ref, \
+      &logging::logger_interface::deref,          \
+      &logging::logger_interface::ref_counter,                                     \
+      NULL, \
+      false))
+
+
+//DEFINE_LOG_UNHANDLED_EXCEPTIONS_MEMBERS
 #endif  // LOG_SHARED
 
 #else /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/

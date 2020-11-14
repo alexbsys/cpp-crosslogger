@@ -23,6 +23,7 @@
 #	define LOG_RELEASE_ON_APP_CRASH 1
 
 #include "log/logger.h"
+#include "log/logger_register_builtin_plugin.h"
 
 DEFINE_LOGGER(NULL);
 
@@ -42,17 +43,26 @@ bool get_line_skip_empty(std::ifstream& infile, std::string& line)
 //[$(V)] $(dd).$(MM).$(yyyy) $(hh):$(mm):$(ss).$(ttt) [$(PID):$(TID)] [$(module)!$(function)]
 TEST_F(logger_tests_log, check_verbose_nofilter)
 {
-	logging::_logger.release();
+  const std::string kTestLogFileName = "check_verbose_nofilter.log";
 
-	logging::configurator.set_log_file_name("test.log");
-	logging::configurator.set_hdr_format("[$(V)]");
-	logging::configurator.set_log_scroll_file_size(0);
-	logging::configurator.set_log_path("$(EXEDIR)");
-	logging::configurator.set_log_scroll_file_count(0);
-	logging::configurator.set_verbose_level(logging::logger_verbose_all);
-	logging::configurator.set_need_sys_info(false);
+	logging::_logger->release();
+  std::remove(kTestLogFileName.c_str() /* logging::configurator.get_full_log_file_path().c_str()*/);
 
-	std::remove(logging::configurator.get_full_log_file_path().c_str());
+  LOG_REGISTER_PLUGIN_FACTORY(new logging::logger_register_builtin_plugin_factory());
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro binary_cmd console_output file_output");
+
+  LOG_SET_CONFIG_PARAM("logger::Verbose", "255");
+  LOG_SET_CONFIG_PARAM("logger::LogSysInfo", "0");
+  LOG_SET_CONFIG_PARAM("file_output::Verbose", "255");
+  LOG_SET_CONFIG_PARAM("file_output::LogFileName", kTestLogFileName.c_str());
+  LOG_SET_CONFIG_PARAM("file_output::FlushFileEveryWrite", "1");
+  LOG_SET_CONFIG_PARAM("logger::HdrFormat", "[$(V)]");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileSize", "0");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileCount", "0");
+  LOG_SET_CONFIG_PARAM("file_output::LogPath", "$(CURRENTDIR)");
+  LOG_RELOAD_CONFIG();
+
+
 
 	LOG_DEBUG("TEST-DEBUG");
 	LOG_INFO("TEST-INFO");
@@ -60,9 +70,9 @@ TEST_F(logger_tests_log, check_verbose_nofilter)
 	LOG_ERROR("TEST-ERROR");
 	LOG_FATAL("TEST-FATAL");
 
-	logging::_logger.release();
+  logging::_logger->release();
 
-	std::ifstream infile(logging::configurator.get_full_log_file_path());
+	std::ifstream infile(kTestLogFileName /* logging::configurator.get_full_log_file_path()*/ );
 	if (!infile.is_open())
 		FAIL();
 
@@ -79,20 +89,28 @@ TEST_F(logger_tests_log, check_verbose_nofilter)
 	ASSERT_TRUE(line == "[FATAL] TEST-FATAL");
 }
 
+TEST_F(logger_tests_log, check_verbose_filter_fatal_warning) {
+  const std::string kTestLogFileName = "check_verbose_filter_fatal_warning.log";
+  
+  logging::_logger->release();
+  std::remove(kTestLogFileName.c_str());
 
-TEST_F(logger_tests_log, check_verbose_filter_fatal_warning)
-{
-	logging::_logger.release();
+  int verb_level = LOGGER_VERBOSE_FATAL | LOGGER_VERBOSE_WARNING;
+  char verb_level_str[24];
+  itoa(verb_level, verb_level_str, 10);
 
-	logging::configurator.set_log_file_name("test.log");
-	logging::configurator.set_hdr_format("[$(V)]");
-	logging::configurator.set_log_scroll_file_size(0);
-	logging::configurator.set_log_path("$(EXEDIR)");
-	logging::configurator.set_log_scroll_file_count(0);
-	logging::configurator.set_verbose_level(logging::logger_verbose_fatal | logging::logger_verbose_warning);
-	logging::configurator.set_need_sys_info(false);
+  LOG_REGISTER_PLUGIN_FACTORY(new logging::logger_register_builtin_plugin_factory());
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro binary_cmd console_output file_output");
 
-	std::remove(logging::configurator.get_full_log_file_path().c_str());
+  LOG_SET_CONFIG_PARAM("logger::Verbose", verb_level_str);
+  LOG_SET_CONFIG_PARAM("logger::LogSysInfo", "0");
+  LOG_SET_CONFIG_PARAM("file_output::Verbose", verb_level_str);
+  LOG_SET_CONFIG_PARAM("file_output::LogFileName", kTestLogFileName.c_str());
+  LOG_SET_CONFIG_PARAM("logger::HdrFormat", "[$(V)]");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileSize", "0");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileCount", "0");
+  LOG_SET_CONFIG_PARAM("file_output::LogPath", "$(CURRENTDIR)");
+
 
 	LOG_DEBUG("TEST-DEBUG");
 	LOG_INFO("TEST-INFO");
@@ -100,9 +118,9 @@ TEST_F(logger_tests_log, check_verbose_filter_fatal_warning)
 	LOG_ERROR("TEST-ERROR");
 	LOG_FATAL("TEST-FATAL");
 
-	logging::_logger.release();
+	logging::_logger->release();
 
-	std::ifstream infile(logging::configurator.get_full_log_file_path());
+	std::ifstream infile(kTestLogFileName);
 	if (!infile.is_open())
 		FAIL();
 
@@ -112,7 +130,7 @@ TEST_F(logger_tests_log, check_verbose_filter_fatal_warning)
 	ASSERT_TRUE(get_line_skip_empty(infile,line));
 	ASSERT_TRUE(line == "[FATAL] TEST-FATAL");
 }
-
+/*
 TEST_F(logger_tests_log, noheader_filter_nodebug)
 {
 	logging::_logger.release();
@@ -156,8 +174,9 @@ TEST_F(logger_tests_log, noheader_scroll)
 {
 	const int max_file_size = 50;
 	const int max_files = 2;
+  const std::string kTestFileName = "noheader_scroll.log";
 
-	logging::_logger.release();
+	logging::_logger->release();
 
 	logging::configurator.set_log_file_name("test.log");
 	logging::configurator.set_hdr_format("");
@@ -222,29 +241,35 @@ TEST_F(logger_tests_log, noheader_scroll)
 			FAIL();
 	}
 }
-
+*/
 TEST_F(logger_tests_log, check_strong_header)
 {
-	logging::_logger.release();
+  const std::string kTestLogFileName = "check_strong_header.log";
 
-	logging::configurator.set_log_file_name("test.log");
-	logging::configurator.set_hdr_format("$(V) $(dd) $(MM) $(yyyy) $(hh) $(mm) $(ss) $(ttt) $(PID) $(TID) $(function)");
-	logging::configurator.set_log_scroll_file_size(0);
-	logging::configurator.set_log_path("$(EXEDIR)");
-	logging::configurator.set_log_scroll_file_count(0);
-	logging::configurator.set_verbose_level(logging::logger_verbose_all);
-	logging::configurator.set_need_sys_info(false);
+	logging::_logger->release();
+  std::remove(kTestLogFileName.c_str());
 
-	std::remove(logging::configurator.get_full_log_file_path().c_str());
+  LOG_REGISTER_PLUGIN_FACTORY(new logging::logger_register_builtin_plugin_factory());
+  LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro binary_cmd console_output file_output");
+
+  LOG_SET_CONFIG_PARAM("logger::Verbose", "255");
+  LOG_SET_CONFIG_PARAM("logger::LogSysInfo", "0");
+  LOG_SET_CONFIG_PARAM("file_output::Verbose", "255");
+  LOG_SET_CONFIG_PARAM("file_output::LogFileName", kTestLogFileName.c_str());
+  LOG_SET_CONFIG_PARAM("logger::HdrFormat", "$(V) $(dd) $(MM) $(yyyy) $(hh) $(mm) $(ss) $(ttt) $(PID) $(TID) $(function)");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileSize", "0");
+  LOG_SET_CONFIG_PARAM("file_output::ScrollFileCount", "0");
+  LOG_SET_CONFIG_PARAM("file_output::LogPath", "$(CURRENTDIR)");
+
 	
 	int millisec;
 	struct tm timeinfo = logging::detail::utils::get_time(millisec);
 
 	LOG_INFO("TEST-INFO");
 
-	logging::_logger.release();
+	logging::_logger->release();
 
-	std::ifstream infile(logging::configurator.get_full_log_file_path());
+	std::ifstream infile(kTestLogFileName /* logging::configurator.get_full_log_file_path()*/ );
 	if (!infile.is_open())
 		FAIL();
 

@@ -68,10 +68,13 @@ class singleton : public logger_singleton_interface<_TIf> {
     ptr_ = NULL;
     need_delete_ = false;
 
-    if (deref_fn_ && ptr) (ptr->*deref_fn_)();
+    int cnt = 0;
 
-    if (ref_cnt_fn_ && ptr) {
-      if ((ptr->*ref_cnt_fn_)()) ptr = NULL;
+    if (deref_fn_ && ptr) 
+      cnt = (ptr->*deref_fn_)();
+
+    if (cnt == 0 && !need_delete_) {
+      ptr = NULL;
     }
 
     if (ptr && need_delete_) delete ptr;

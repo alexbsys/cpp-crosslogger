@@ -367,7 +367,7 @@ private:
   void handle_first_write() {
     if (first_write_) {
       first_write_ = false;
-      put_to_stream(logger_verbose_all, "", "\n");
+      put_to_stream(logger_verbose_all, "", "");
 #if LOG_USE_SYSTEMINFO
       if (log_config_.log_sys_info_) 
         put_to_stream(logger_verbose_all, std::string(), query_system_info());
@@ -634,6 +634,8 @@ private:
       if (new_plugin) {
         new_plugins.push_back(new_plugin);
         ++modules_loaded;
+      } else {
+        //TODO: notify user that plugin cannot be loaded
       }
     }
 
@@ -703,7 +705,7 @@ private:
     const std::string kLoggerConfigTypeName = "logger";
 
     log_config_.log_sys_info_ = cfg::get_logcfg_int(config_, kLoggerConfigTypeName, std::string(), "LogSysInfo", 1) ? true : false;
-    log_config_.filter_verbose_level_ = cfg::get_logcfg_int(config_, kLoggerConfigTypeName, std::string(), "FilterVerboseLevel", logger_verbose_all);
+    log_config_.filter_verbose_level_ = cfg::get_logcfg_int(config_, kLoggerConfigTypeName, std::string(), "Verbose", logger_verbose_all);
     log_config_.header_format_ = cfg::get_logcfg_string(config_, kLoggerConfigTypeName, std::string(), "HdrFormat", default_hdr_format);
     log_config_.process_macro_in_log_text_ = cfg::get_logcfg_int(config_, kLoggerConfigTypeName, std::string(), "ProcessMacroInLogText", 0) ? true : false;
     log_config_.load_plugins_from_config_ = cfg::get_logcfg_int(config_, kLoggerConfigTypeName, std::string(), "LoadPluginsFromConfig", 1) ? true : false;
