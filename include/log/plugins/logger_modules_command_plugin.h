@@ -46,8 +46,8 @@ namespace logging {
         const module_entry_t& mod_entry = *i;
 
 #ifdef LOG_PLATFORM_64BIT
-        sstream << stringformat("0x%.8X%.8X", static_cast<uint32_t>(mod_entry.baseAddress >> 32),
-          mod_entry.baseAddress) << "\t";
+        sstream << str::stringformat("0x%.8X%.8X", static_cast<uint32_t>(mod_entry.base_address >> 32),
+          mod_entry.base_address) << "\t";
 #endif  // LOG_PLATFORM_64BIT
 
 #ifdef LOG_PLATFORM_32BIT

@@ -80,7 +80,7 @@ static long atomic_decrement(long volatile* variable) {
 }
 
 static long atomic_exchange(long volatile* variable, long new_val) {
-  return __atomic_exchange_n(variable, new_val);
+  return __atomic_exchange_n(variable, new_val, __ATOMIC_SEQ_CST);
 }
 
 static bool atomic_compare_exchange(long volatile* variable, long new_val, long expected_val) {
@@ -277,7 +277,7 @@ static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mute
     LOG_MT_MUTEX_LOCK(mutex);
   }
 
-  int ret = pthread_cond_timedwait(evt, &mt_buffer_lock_, &ts);
+  int ret = pthread_cond_timedwait(evt, mutex, &ts);
   if (!is_mutex_locked) {
     LOG_MT_MUTEX_UNLOCK(mutex);
   }

@@ -5,10 +5,18 @@
 #include "logger_pdetect.h"
 
 /// Use ANSI for varargs
-/// Must be set for windows
-#ifdef LOG_PLATFORM_WINDOWS 
+/// Must be set for MSVC, GCC, clang
+#ifdef LOG_COMPILER_MSVC
 #define ANSI
-#endif /*LOG_PLATFORM_WINDOWS*/
+#endif /*LOG_COMPILER_MSVC*/
+
+#ifdef LOG_COMPILER_GCC
+#define ANSI
+#endif /*LOG_COMPILER_GCC*/
+
+#ifdef LOG_COMPILER_CLANG
+#define ANSI
+#endif /*LOG_COMPILER_CLANG*/
 
 #ifdef LOG_PLATFORM_POSIX_BASED
 #define LOG_CDECL

@@ -9,7 +9,7 @@
 #include <log/logger_interfaces.h>
 #include <log/logger_userdefs.h>
 #include <log/logger_verbose.h>
-
+#include <log/detail/logger_strutils.h>
 #include <log/detail/logger_runtime_debugging.h>
 
 #if LOG_SHARED
@@ -252,8 +252,11 @@ class unhandled_exceptions_processor {
  * \param  secret  Pointer to context structure
  */
 static void crash_handler(int sig, siginfo_t* info, void* secret) {
+  using namespace detail;
+
   void* trace[1024];
   ucontext_t* uc = (ucontext_t*)secret;
+  logging::logger_interface* logger_obj = NULL;
 
 #ifdef LOG_PLATFORM_64BIT
   void* pc = (void*)uc->uc_mcontext.gregs[REG_RIP];
@@ -263,10 +266,26 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   void* pc = (void*)uc->uc_mcontext.gregs[REG_EIP];
 #endif  // LOG_PLATFORM_32BIT
 
+#if LOG_SHARED
+  logger_obj = reinterpret_cast<logging::logger_interface*>(logging::detail::shared_obj::try_find_shared_object(0));
+#else /*LOG_SHARED*/
+  logger_obj = _logger->get();
+#endif
+
+  if (!logger_obj) {
+    return;
+  }
+
   std::string message = str::stringformat("*** Got signal %d, faulty address %p, from %p", sig,
                                      info->si_addr, pc);
-  LOG_FATAL(message.c_str());
-  LOG_MODULES_FATAL;
+
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, message.c_str());
+  logger_obj->flush();
+
+
+  // log modules
+  LOGOBJ_CMD(logger_obj, 0x1002, logger_verbose_fatal, NULL, 0);
+//  LOG_MODULES_FATAL;
 
   int trace_size = backtrace(trace, 1024);
   trace[1] = pc;
@@ -274,15 +293,14 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   std::string result =
       "\n" + runtime_debugging::get_stack_trace_string(trace, trace_size, 0);
 
-  LOG_FATAL("*** STACKTRACE ***");
-  LOG_FATAL(result.c_str());
-  LOG_FATAL("*** END STACKTRACE ***");
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** STACKTRACE ***");
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, result.c_str());
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** END STACKTRACE ***");
 
-  if (_logger.get())
-    _logger->flush();
+  logger_obj->flush();
 
 #if LOG_RELEASE_ON_APP_CRASH
-  _logger.release();
+//  _logger.release();
 #endif  // LOG_RELEASE_ON_APP_CRASH
 
 #if LOG_SHOW_MESSAGE_ON_FATAL_CRASH

@@ -411,22 +411,29 @@
 
 #else /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
 
-#define LOG_SET_CURRENT_THREAD_NAME(name) __c_logger_set_current_thread_name(name)
+#define LOG_SET_CURRENT_THREAD_NAME(name) __c_logger_set_current_thread_name(LOGOBJ_GET_DEFAULT_LOGGER(), name)
 
 
 #if LOG_USE_OBJMON
 #define LOG_OBJMON_REGISTER_INSTANCE() { \
    struct { unsigned int hash; const char* type_name; void* ptr; } param = { typeid(*this).hash_code(), typeid(*this).name(), this }; \
-  __c_logger_log_cmd(0x1010, logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, __LINE__, &param, 0) \
+   LOG_CMD(0x1010, LOGGER_VERBOSE_INFO, &param, 0); \
 }
 
+//   __c_logger_log_cmd(0x1010, logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, __LINE__, &param, 0) \
 
-#define LOG_OBJMON_UNREGISTER_INSTANCE() \
-  __c_logger_objmon_unregister(typeid(*this).hash_code(), this)
-//#define LOG_OBJMON_DUMP_INFO() __c_logger_objmon_dump(logger_verbose_info)
-//#define LOG_OBJMON_DUMP_DEBUG() __c_logger_objmon_dump(logger_verbose_debug)
-//#define LOG_OBJMON_DUMP_WARNING() __c_logger_objmon_dump(logger_verbose_warning)
-//#define LOG_OBJMON_DUMP_ERROR() __c_logger_objmon_dump(logger_verbose_error)
+
+#define LOG_OBJMON_UNREGISTER_INSTANCE() { \
+  struct { unsigned int hash; void* ptr; } param = { typeid(*this).hash_code(), this }; \
+  LOG_CMD(0x1011, LOGGER_VERBOSE_INFO, &param, 0); \
+}
+
+//  __c_logger_objmon_unregister(typeid(*this).hash_code(), this)
+#define LOG_OBJMON_DUMP_INFO()   LOG_CMD(0x1012, LOGGER_VERBOSE_INFO, NULL, 0)
+#define LOG_OBJMON_DUMP_DEBUG() LOG_CMD(0x1012, LOGGER_VERBOSE_DEBUG, NULL, 0)
+#define LOG_OBJMON_DUMP_WARNING() LOG_CMD(0x1012, LOGGER_VERBOSE_WARNING, NULL, 0)
+#define LOG_OBJMON_DUMP_ERROR() LOG_CMD(0x1012, LOGGER_VERBOSE_ERROR, NULL, 0)
+#define LOG_OBJMON_DUMP_FATAL() LOG_CMD(0x1012, LOGGER_VERBOSE_FATAL, NULL, 0)
 #endif  // LOG_USE_OBJMON
 
 

@@ -2,12 +2,13 @@
 #ifndef LOGGER_PLUGIN_MANAGER_HEADER
 #define LOGGER_PLUGIN_MANAGER_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_interfaces.h"
-#include "logger_shared_ptr.hpp"
-#include "logger_strutils.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_shared_ptr.hpp>
+
+#include <log/detail/logger_strutils.h>
 
 #include <list>
 #include <vector>

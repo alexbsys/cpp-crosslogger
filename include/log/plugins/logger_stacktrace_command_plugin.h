@@ -86,7 +86,7 @@ private:
 
     void* bt[kStackTraceMaxDepth];
     int bt_size = backtrace(bt, kStackTraceMaxDepth);
-    *stack_trace = runtime_debugging::get_stack_trace_string(bt, bt_size, 1);
+    *stack_trace = detail::runtime_debugging::get_stack_trace_string(bt, bt_size, 1);
   }
 #endif  // LOG_PLATFORM_WINDOWS
 

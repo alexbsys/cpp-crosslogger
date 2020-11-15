@@ -344,8 +344,9 @@ int LOG_CDECL logger_load_dll() {
 
 #endif //LOG_PLATFORM_WINDOWS
 
-  if (!__logger_dll_handle)
+  if (!__logger_dll_handle) {
     return 0;
+  }
 
   logger_load_dll_functions(__logger_dll_handle);
 
@@ -395,11 +396,11 @@ int LOG_CDECL logger_load_dll() {
     __c_logger_get_logger = &__c_logger_get_logger_dummy;
 
   if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args) {
-		logger_restore_dummies();
-		return 0;
-	}
+    logger_restore_dummies();
+    return 0;
+  }
 
-	return 1;
+  return 1;
 }
 
 #endif //LOG_USE_DLL && !LOG_THIS_IS_DLL

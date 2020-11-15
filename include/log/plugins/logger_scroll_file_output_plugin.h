@@ -222,8 +222,7 @@ protected:
         }
 
         char new_index_buffer[32];
-        itoa(new_index, new_index_buffer, 10);
-
+        sprintf(new_index_buffer, "%d", new_index);
 
         std::string new_name =
           name.substr(0, name.find_last_of('.')) + std::string(".") + std::string(new_index_buffer);

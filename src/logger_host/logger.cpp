@@ -38,10 +38,11 @@ void on_logger_created_fn(logging::logger_interface* log) {
 
 #if LOG_ENABLED
 
-
-
 extern "C"
-void* __c_logger_get_logger() {
+void* c_logger_get_logger_internal() {
+  if (!logging::_logger)
+    return NULL;
+
   if (!logging::_logger->get())
     return NULL;
 
@@ -49,8 +50,13 @@ void* __c_logger_get_logger() {
 }
 
 extern "C"
+void* __c_logger_get_logger() {
+  return c_logger_get_logger_internal();
+}
+
+extern "C"
 void* c_logger_ref(void* logobj) {
-  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  void* log_interface_vptr = logobj ? logobj : c_logger_get_logger_internal();
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)
@@ -62,7 +68,7 @@ void* c_logger_ref(void* logobj) {
 
 extern "C"
 void* c_logger_deref(void* logobj) {
-  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  void* log_interface_vptr = logobj ? logobj : c_logger_get_logger_internal();
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)
@@ -76,7 +82,7 @@ void* c_logger_deref(void* logobj) {
 
 extern "C"
 unsigned int c_logger_get_version(void* logobj) {
-  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  void* log_interface_vptr = logobj ? logobj : c_logger_get_logger_internal();
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)
@@ -87,7 +93,7 @@ unsigned int c_logger_get_version(void* logobj) {
 
 extern "C"
 unsigned int c_logger_is_master(void* logobj) {
-  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  void* log_interface_vptr = logobj ? logobj : c_logger_get_logger_internal();
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)

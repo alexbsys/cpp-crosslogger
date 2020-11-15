@@ -5,32 +5,31 @@
 #ifndef LOGGER_IMPL_HEADER
 #define LOGGER_IMPL_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_interfaces.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_interfaces.h>
+#include <log/logger_varargs.h>
+#include <log/logger_verbose.h>
+#include <log/logger_stream.h>
+#include <log/logger_cfg.h>
 
-#include "logger_cfgfn.h"
-#include "logger_varargs.h"
-#include "logger_verbose.h"
-
-#include "logger_mt.h"
-#include "logger_plugin_manager.h"
-
-#include "logger_utils.h"
-#include "logger_strutils.h"
-#include "logger_stream.h"
+#include <log/detail/logger_cfgfn.h>
+#include <log/detail/logger_mt.h>
+#include <log/detail/logger_plugin_manager.h>
+#include <log/detail/logger_utils.h>
+#include <log/detail/logger_strutils.h>
 
 #if LOG_SHARED
-#include "logger_shmem.h"
+#include <log/detail/logger_shmem.h>
 #endif /*LOG_SHARED*/
 
 #if LOG_USE_SYSTEMINFO
-#include "logger_sysinfo.h"
+#include <log/detail/logger_sysinfo.h>
 #endif /*LOG_USE_SYSTEMINFO*/
 
 #if LOG_USE_MODULEDEFINITION
-#include "logger_moddef.h"
+#include <log/detail/logger_moddef.h>
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 namespace logging {
@@ -202,15 +201,16 @@ private:
    * \param    data    Pointer to logger* object
    * \return   thread exit code
    */
-  static unsigned long
 #ifdef LOG_PLATFORM_WINDOWS
-      __stdcall
+  static unsigned long  __stdcall
+#else /*LOG_PLATFORM_WINDOWS*/
+  static void*
 #endif  // LOG_PLATFORM_WINDOWS
       log_thread_fn(void* data) {
     const int kPollWriteEventMs = 250;
     utils::set_current_thread_name("logger_thread");
     logger* log = reinterpret_cast<logger*>(data);
-    
+
     while (true) {
       std::list<log_record> log_records;
       //std::list<plugin_data> outputs;
@@ -262,7 +262,7 @@ private:
     }
 
     LOG_MT_THREAD_EXIT(0);
-    return 0;
+    return 0L;
   }
 
   /**

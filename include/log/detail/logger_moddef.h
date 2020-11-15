@@ -246,7 +246,7 @@ public:
 #else   // LOG_PLATFORM_WINDOWS
   static std::string module_name_by_addr(void* function_address) {
     Dl_info info;
-    if (dladdr(functionAddress, &info)) {
+    if (dladdr(function_address, &info)) {
       return info.dli_fname;
     }
     return std::string();

@@ -144,6 +144,7 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 			int s_len;
 
 			p = va_arg(arp, char*);
+
 			for (j = 0; p[j]; j++);
 			while (!(f & 2) && j++ < w) {
               if (length + max_chars_produced_by_xputc >= out_chars_count)
@@ -155,6 +156,8 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 			s_len = xputs_helper(outptr, p, out_chars_count, length);
 			if (s_len < 0)
               return -1;
+
+      length += s_len;
 
 			while (j++ < w) {
               if (length + max_chars_produced_by_xputc >= out_chars_count)
@@ -294,10 +297,15 @@ static int LOG_CDECL xsnprintf(char* buff, int chars_count, const char* fmt, ...
 static int LOG_CDECL xvsnprintf(char* buff, int chars_count, const char* fmt, va_list args) {
   using namespace detail::str;
 
+  va_list args_copy;
+  va_copy(args_copy,args);
+
   char* buff_ptr = buff;
   int length;
 
-  length = xbuff_printf_args(&buff_ptr, chars_count, fmt, args);
+  length = xbuff_printf_args(&buff_ptr, chars_count, fmt, args_copy);
+
+  va_end(args_copy);
 
   if (length >= 0 && length < chars_count)
     *buff_ptr = 0;

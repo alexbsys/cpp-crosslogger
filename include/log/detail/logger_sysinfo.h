@@ -2,19 +2,19 @@
 #ifndef LOGGER_SYSINFO_HEADER
 #define LOGGER_SYSINFO_HEADER
 
-#include "logger_config.h"
-#include "logger_pdetect.h"
-#include "logger_pdefs.h"
-#include "logger_sysinclib.h"
-#include "logger_strutils.h"
-#include "logger_utils.h"
+#include <log/logger_config.h>
+#include <log/logger_pdetect.h>
+#include <log/logger_pdefs.h>
+#include <log/logger_sysinclib.h>
+#include <log/detail/logger_strutils.h>
+#include <log/detail/logger_utils.h>
 
 #ifdef LOG_PLATFORM_WINDOWS
-#include "logger_win_registry.h"
+#include <log/detail/logger_win_registry.h>
 #endif /*LOG_PLATFORM_WINDOWS*/
 
 #if LOG_USE_MODULEDEFINITION
-#include "logger_moddef.h"
+#include <log/detail/logger_moddef.h>
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 namespace logging {
@@ -527,15 +527,15 @@ namespace sys_info_posix {
     struct sysinfo info;
     sysinfo(&info);
 
-    memoryString = stringformat("Total avail RAM %d, total swap %d, total high %d",
+    memoryString = str::stringformat("Total avail RAM %d, total swap %d, total high %d",
       info.totalram, info.totalswap, info.totalhigh);
-    memoryString += stringformat("\nFree RAM %d, free swap %d, free high %d", info.freeram,
+    memoryString += str::stringformat("\nFree RAM %d, free swap %d, free high %d", info.freeram,
       info.freeswap, info.freehigh);
-    memoryString += stringformat("\nMem used by buffers %d, shared RAM %d", info.bufferram,
+    memoryString += str::stringformat("\nMem used by buffers %d, shared RAM %d", info.bufferram,
       info.sharedram);
-    memoryString += stringformat("\nMemory unit in bytes %d, process count: %d",
+    memoryString += str::stringformat("\nMemory unit in bytes %d, process count: %d",
       info.mem_unit, info.procs);
-    memoryString += stringformat("\nAvg load 1 min : 5 min : 15 min  --  %d:%d:%d",
+    memoryString += str::stringformat("\nAvg load 1 min : 5 min : 15 min  --  %d:%d:%d",
       info.loads[0], info.loads[1], info.loads[2]);
 #endif  // LOG_HAVE_SYS_SYSINFO_H
     return memoryString;
@@ -559,13 +559,13 @@ namespace sys_info_posix {
 
   static std::string get_current_user_sid() {
 #ifdef LOG_HAVE_PWD_H
-    std::string result = stringformat("%d", getuid());
+    std::string result = str::stringformat("%d", getuid());
 
     struct passwd* pass;
     pass = getpwuid(getuid());
     if (pass) {
       result += std::string(":");
-      result += stringformat("%d", pass->pw_gid);
+      result += str::stringformat("%d", pass->pw_gid);
     }
 
     return result;
@@ -610,7 +610,7 @@ static std::string query_system_info() {
 #ifdef LOG_HAVE_SYS_SYSINFO_H
   struct sysinfo info;
   sysinfo(&info);
-  system_info << stringformat("Uptime, seconds: %d", info.uptime) << std::endl;
+  system_info << str::stringformat("Uptime, seconds: %d", info.uptime) << std::endl;
 #endif  // LOG_HAVE_SYS_SYSINFO_H
 
 #endif /*LOG_PLATFORM_POSIX_BASED*/

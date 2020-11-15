@@ -411,7 +411,7 @@ public:
       std::string cur_full_sym = bt_syms[i];
       char *begin_name = 0, *begin_offset = 0, *end_offset = 0;
 
-      result += stringformat(" [%d] <-- (%p) ", index++, trace[i]);
+      result += str::stringformat(" [%d] <-- (%p) ", index++, trace[i]);
 
       // find parentheses and +address offset surrounding the mangled name:
       // ./module(function+0x15c) [0x8048a6d]
@@ -435,17 +435,17 @@ public:
         char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
         if (status == 0) {
           funcname = ret;  // use possibly realloc()-ed string
-          result += stringformat(" %s: %s+%s\n", bt_syms[i], funcname, begin_offset);
+          result += str::stringformat(" %s: %s+%s\n", bt_syms[i], funcname, begin_offset);
         }
         else {
           // demangling failed. Output function name as a C function with
           // no arguments.
-          result += stringformat(" %s: %s()+%s\n", bt_syms[i], begin_name, begin_offset);
+          result += str::stringformat(" %s: %s()+%s\n", bt_syms[i], begin_name, begin_offset);
         }
       }
       else {
         // couldn't parse the line? print the whole line.
-        result += stringformat(" %s\n", bt_syms[i]);
+        result += str::stringformat(" %s\n", bt_syms[i]);
       }
 
       result += "    ";

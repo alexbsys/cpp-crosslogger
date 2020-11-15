@@ -8,6 +8,7 @@
 #include "logger_config.h"
 #include "logger_pdetect.h"
 #include "logger_pdefs.h"
+#include "logger_varargs.h"
 
 #ifdef LOG_CPP
 extern "C" {

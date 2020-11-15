@@ -6,6 +6,7 @@
 #include <log/logger_config.h>
 #include <string>
 #include <vector>
+#include <string.h>
 
 #if LOG_USE_OWN_VSNPRINTF
 #include "logger_xprintf.h"
