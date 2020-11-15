@@ -142,6 +142,13 @@ unsigned int LOG_CDECL c_logger_get_version_dummy(void* logobj) {
   return 0;
 }
 
+int LOG_CDECL c_logger_is_master_dummy(void* logobj) {
+  if (logger_load_dll() && c_logger_is_master != c_logger_is_master_dummy)
+    return c_logger_is_master(logobj);
+
+  return 0;
+}
+
 void (LOG_CDECL *__c_logger_log)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, ...) = &__c_logger_log_dummy;
 void (LOG_CDECL *__c_logger_log_args)(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) = &__c_logger_log_args_dummy;
 void (LOG_CDECL *__c_logger_log_cmd)(void* logobj, int cmd_id, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const void* vparam, int iparam) = &__c_logger_log_cmd_dummy;
@@ -157,6 +164,7 @@ int(LOG_CDECL* __c_logger_attach_plugin)(void* logobj, void* plugin_interface);
 int(LOG_CDECL* __c_logger_detach_plugin)(void* logobj, void* plugin_interface);
 void(LOG_CDECL* __c_logger_flush)(void* logobj);
 unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj);
+int(LOG_CDECL* c_logger_is_master)(void* logobj);
 
 void logger_restore_dummies()
 {
@@ -177,6 +185,7 @@ void logger_restore_dummies()
   __c_logger_detach_plugin = &__c_logger_detach_plugin_dummy;
   __c_logger_flush = &__c_logger_flush_dummy;
   c_logger_get_version = &c_logger_get_version_dummy;
+  c_logger_is_master = &c_logger_is_master_dummy;
 
 	if (__logger_dll_handle) {
 #ifdef LOG_PLATFORM_WINDOWS
@@ -260,6 +269,9 @@ int LOG_CDECL logger_load_dll_functions(void* logger_dll_handle) {
 
   c_logger_get_version = (unsigned int(LOG_CDECL*)(void* logobj))
     LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_get_version");
+
+  c_logger_is_master = (unsigned int(LOG_CDECL*)(void* logobj))
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_is_master");
 
   return 1;
 }
@@ -362,6 +374,9 @@ int LOG_CDECL logger_load_dll() {
 
   if (!c_logger_get_version)
     c_logger_get_version = &c_logger_get_version_dummy;
+
+  if (!c_logger_is_master)
+    c_logger_is_master = &c_logger_is_master_dummy;
 
   if (!__c_logger_log_args || !__c_logger_log || !__c_logger_log_cmd || !__c_logger_log_cmd_args) {
 		logger_restore_dummies();

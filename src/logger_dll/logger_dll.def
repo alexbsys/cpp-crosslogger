@@ -14,6 +14,7 @@ EXPORTS
     __c_logger_attach_plugin
     __c_logger_detach_plugin
     c_logger_get_version
+	c_logger_is_master
     c_logger_ref
     c_logger_deref
     __c_logger_get_logger

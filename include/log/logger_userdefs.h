@@ -152,6 +152,9 @@
 #define LOGOBJ_GET_VERSION(logobj) \
   c_logger_get_version((logobj))
 
+#define LOGOBJ_IS_MASTER(logobj) \
+  c_logger_is_master((logobj))
+
 #define LOGOBJ_SET_CONFIG_PARAM(logobj,name,value) \
   __c_logger_set_config_param((logobj),(name),(value))
 

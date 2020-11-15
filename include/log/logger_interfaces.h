@@ -164,6 +164,8 @@ struct logger_interface {
   virtual void set_config_param(const char* key, const char* value) = 0;
   virtual int get_config_param(const char* key, char* buffer, int buffer_size) const = 0;
 
+  virtual bool is_master() const = 0;
+
   /** Log format, like printf to log */
   virtual void LOG_CDECL log(int verb_level, void* addr, const char* function_name,
     const char* source_file, int line_number, const char* format,

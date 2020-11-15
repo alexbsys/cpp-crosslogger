@@ -86,6 +86,17 @@ unsigned int c_logger_get_version(void* logobj) {
 }
 
 extern "C"
+unsigned int c_logger_is_master(void* logobj) {
+  void* log_interface_vptr = logobj ? logobj : __c_logger_get_logger();
+  logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
+
+  if (!logi)
+    return NULL;
+
+  return logi->is_master() ? 1 : 0;
+}
+
+extern "C"
 void __c_logger_log_args(void* logobj, int verbose_level, void* caller_addr, const char* function, const char* file, int line, const char* format, va_list args) {
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(c_logger_ref(logobj));
   if (!logi)

@@ -73,6 +73,7 @@ int __c_logger_detach_plugin(void* logobj, void* plugin_interface);
 void __c_logger_flush(void* logobj);
 
 unsigned int c_logger_get_version(void* logobj);
+extern int c_logger_is_master(void* logobj);
 
 
 #endif  /*LOG_USE_DLL && !LOG_THIS_IS_DLL*/

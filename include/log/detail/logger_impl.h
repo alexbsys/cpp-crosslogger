@@ -472,6 +472,14 @@ private:
     return 0x02010101;
   }
 
+  bool is_master() const LOG_METHOD_OVERRIDE {
+#if LOG_SHARED
+    return shared_master_;
+#else /*LOG_SHARED*/
+    return true;
+#endif /*LOG_SHARED*/
+  }
+
   /**
    * \brief    Logger object constructor
    */
