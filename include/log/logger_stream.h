@@ -12,15 +12,16 @@ namespace logging {
 
 class log_stream {
 public:
-  log_stream(logger_interface* logger_obj, int verb_level, void* addr,
-    const char* function_name, const char* source_file, int line_number)
+  log_stream(logger_interface* logger_obj, int verb_level, void* addr = NULL,
+    const char* function_name = NULL, const char* source_file = NULL, int line_number = 0)
     : logger_obj_(logger_obj)
     , verb_level_(verb_level)
     , addr_(addr)
     , function_name_(function_name)
     , source_file_(source_file)
     , line_number_(line_number) {
-    logger_obj_->ref();
+    if (logger_obj_)
+      logger_obj_->ref();
   }
 
   log_stream(const log_stream& stream)
@@ -30,12 +31,15 @@ public:
     , function_name_(stream.function_name_)
     , source_file_(stream.source_file_), line_number_(stream.line_number_) {
     ss_.str(stream.ss_.str());
-    logger_obj_->ref();
+    if (logger_obj_)
+      logger_obj_->ref();
   }
 
   virtual ~log_stream() {
-    logger_obj_->log(verb_level_, addr_, function_name_, source_file_, line_number_, "%s", ss_.str().c_str());
-    logger_obj_->deref();
+    if (logger_obj_) {
+      logger_obj_->log(verb_level_, addr_, function_name_, source_file_, line_number_, "%s", ss_.str().c_str());
+      logger_obj_->deref();
+    }
   }
 
   template<typename T>

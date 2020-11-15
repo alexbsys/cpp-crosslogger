@@ -161,7 +161,7 @@ void multithread_test()
 	sleep(10);
 #endif
 }
-
+#include <log/logger_stream.h>
 int main(int argc, char* argv[])
 {
 	unsigned long start_ms;
@@ -182,7 +182,11 @@ int main(int argc, char* argv[])
 	LOG_INFO("WSTRING: %ws", L"test wstring");
 	LOG_WARNING("Testing warning at $(srcfile), line $(line)");
 
+  LOGS_DEBUG() << "Test stream";
+  LOGS_ERROR() << "Hello world" << " test " << 12345;
+  LOGS_DEBUG() << "Next string " << std::string("this-is-stdstring");
 
+  
 	LOG_DEBUG("============ Stack trace test ============");
 	stacktrace_example();
 

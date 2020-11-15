@@ -164,7 +164,24 @@
 #define LOGOBJ_FLUSH(logobj) \
   __c_logger_flush((logobj))
 
-#define LOG_STREAM(v) 
+#define LOG_GET_LOGGER() \
+  __c_logger_get_logger()
+
+#if defined(LOG_CPP)
+#define LOGOBJ_STREAM(logobj,v)  reinterpret_cast<logging::logger_interface*>((logobj))->stream((v), LOG_GET_CALLER_ADDR, \
+      __FUNCTION__, __FILE__, __LINE__)
+
+#define LOG_STREAM(v) \
+  (LOG_GET_LOGGER() ? LOGOBJ_STREAM(LOG_GET_LOGGER(), (v)) : logging::log_stream(NULL,(v)))
+
+//  LOGOBJ_GET_DEFAULT_LOGGER()->stream((v), LOG_GET_CALLER_ADDR, \
+//      __FUNCTION__, __FILE__, __LINE__)
+
+
+#endif /*LOG_CPP*/
+
+
+
 
 #define LOGOBJ_GET_DEFAULT_LOGGER() (0L)
 
@@ -291,6 +308,14 @@
 #endif  // LOG_AUTO_DEBUGGING
 
 
+#if defined(LOG_CPP)
+#define LOGS_DEBUG()    LOG_STREAM(LOGGER_VERBOSE_DEBUG)
+#define LOGS_INFO()    LOG_STREAM(LOGGER_VERBOSE_INFO)
+#define LOGS_WARNING()    LOG_STREAM(LOGGER_VERBOSE_WARNING)
+#define LOGS_ERROR()    LOG_STREAM(LOGGER_VERBOSE_ERROR)
+#define LOGS_FATAL()    LOG_STREAM(LOGGER_VERBOSE_FATAL)
+#endif /*LOG_CPP*/
+
 
 ////// both for C and C++ ends
 
@@ -302,7 +327,7 @@
 
 
 #if defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
-
+/*
 #define LOGS_DEBUG() \
   LOG_STREAM(LOGGER_VERBOSE_DEBUG)
 
@@ -317,25 +342,12 @@
 
 #define LOGS_FATAL() \
   LOG_STREAM(LOGGER_VERBOSE_FATAL)
-
+  */
 #define LOG_STD_EXCEPTION(v, e)  \
   LOG_CMD(0x1008, (v), (e), 0)
 
 #define LOG_EXCEPTION_DEBUG(e)                                                        \
   LOG_STD_EXCEPTION(logging::logger_verbose_debug, e)
-
-#define LOG_EXCEPTION_WARNING(e)                                                        \
-  logging::_logger->log_exception(logging::logger_verbose_warning, LOG_GET_CALLER_ADDR, \
-                                  __FUNCTION__, __FILE__, __LINE__, e)
-#define LOG_EXCEPTION_INFO(e)                                                        \
-  logging::_logger->log_exception(logging::logger_verbose_info, LOG_GET_CALLER_ADDR, \
-                                  __FUNCTION__, __FILE__, __LINE__, e)
-#define LOG_EXCEPTION_ERROR(e)                                                        \
-  logging::_logger->log_exception(logging::logger_verbose_error, LOG_GET_CALLER_ADDR, \
-                                  __FUNCTION__, __FILE__, __LINE__, e)
-#define LOG_EXCEPTION_FATAL(e)                                                        \
-  logging::_logger->log_exception(logging::logger_verbose_fatal, LOG_GET_CALLER_ADDR, \
-                                  __FUNCTION__, __FILE__, __LINE__, e)
 
 
 

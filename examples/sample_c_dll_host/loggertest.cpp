@@ -180,7 +180,6 @@ int main(int argc, char* argv[])
 	LOG_INFO("WSTRING: %ws", L"test wstring");
 	LOG_WARNING("Testing warning at $(srcfile), line $(line)");
 
-
 	LOG_DEBUG("============ Stack trace test ============");
 	stacktrace_example();
 
