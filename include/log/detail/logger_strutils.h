@@ -36,7 +36,7 @@ namespace str {
 #  ifdef LOG_COMPILER_MSVC
       result = _vsnprintf_s(buffer, buffer_size, buffer_size - 1, format, arguments);
 #  else   // LOG_COMPILER_MSVC
-      result = vsnprintf(buffer, bufferSize - 1, format, arguments);
+      result = vsnprintf(buffer, buffer_size - 1, format, arguments);
 #  endif  // LOG_COMPILER_MSVC
 #endif // LOG_USE_OWN_VSNPRINTF
 

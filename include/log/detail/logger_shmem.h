@@ -10,6 +10,8 @@
 #include <log/logger_pdefs.h>
 #include <log/logger_sysinclib.h>
 
+#include <stdint.h>
+
 #if LOG_SHARED && !defined(LOG_PLATFORM_WINDOWS)
 #include <sys/mman.h>
 #define SH_MEM_READ 1
@@ -19,6 +21,14 @@
 
 namespace logging {
 namespace detail {
+
+
+// logger shared page structure
+// page+0   4  signature_1  (0x12345678)
+// page+4   4  signature_2  (0xa0b0c0d0)
+// page+8   4  reserved
+// page+12  4  reserved
+// page+16  4/8  pointer to logger
 
 /**
 * \struct    shared_obj helper. Implements working with 'shared' logger in memory.
@@ -151,12 +161,12 @@ struct shared_obj {
       if (result_ptr && result_ptr != invalid_ptr) {
         memset(result_ptr, 0, shared_page_mem_size);
 
-        unsigned long* ptr = (unsigned long*)page;
+        unsigned int* ptr = (unsigned int*)page;
         *ptr = shared_mem_signature_1;
         ptr++;
 
         *ptr = shared_mem_signature_2;
-        *(intptr_t*)(page + 8) = (intptr_t)object;
+        *(intptr_t*)(page + (4*sizeof(unsigned int))) = (intptr_t)object;
 
         break;
       }
@@ -177,6 +187,7 @@ struct shared_obj {
     for (intptr_t page = start_shared_page;
       page < start_shared_page + (shared_pages_find * shared_page_size);
       page += shared_page_size) {
+
 #ifdef LOG_PLATFORM_WINDOWS
       MEMORY_BASIC_INFORMATION mem_info;
       if (!VirtualQuery((LPCVOID)page, &mem_info, sizeof(MEMORY_BASIC_INFORMATION)))
@@ -190,9 +201,8 @@ struct shared_obj {
       if ((page_bits & SH_MEM_READ) && (page_bits & SH_MEM_WRITE))
 #endif  // LOG_PLATFORM_WINDOWS
       {
-        if (*((unsigned long*)page) != shared_mem_signature_1) continue;
-
-        if (*((unsigned long*)page + 1) != shared_mem_signature_2) continue;
+        if (*((unsigned int*)page) != shared_mem_signature_1) continue;
+        if (*((unsigned int*)page + 1) != shared_mem_signature_2) continue;
 
         return page;
       }
@@ -209,7 +219,7 @@ struct shared_obj {
     intptr_t page = try_find_shared_object_page(object_id);
     if (!page) return NULL;
 
-    intptr_t* ptr = (intptr_t*)(page + 8);
+    intptr_t* ptr = (intptr_t*)(page + (4*sizeof(unsigned int)));
     return (void*)*ptr;
   }
 

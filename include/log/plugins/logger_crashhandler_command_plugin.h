@@ -299,6 +299,11 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
 
   logger_obj->flush();
 
+  // dump objects
+  LOGOBJ_CMD(logger_obj, 0x1012, logger_verbose_fatal, NULL, 0);
+  logger_obj->flush();
+
+
 #if LOG_RELEASE_ON_APP_CRASH
 //  _logger.release();
 #endif  // LOG_RELEASE_ON_APP_CRASH

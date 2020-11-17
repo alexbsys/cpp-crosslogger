@@ -114,7 +114,7 @@
 /// Use own vsnprintf implementation instead system one. Own implementation is not so fast and smart like system.
 /// But sometimes system implementation has buffer length restrictions
 #ifndef LOG_USE_OWN_VSNPRINTF
-#define LOG_USE_OWN_VSNPRINTF 1
+#define LOG_USE_OWN_VSNPRINTF 0
 
 // Replace \n -> \r\n for stupid terminals (1 - enabled, 0 - disabled)
 #define LOG_OWN_VSNPRINTF_CR_CRLF 0

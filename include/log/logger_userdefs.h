@@ -135,7 +135,7 @@
   __c_logger_reload_config((logobj))
 
 #define LOGOBJ_DUMP_STATE(logobj,v) \
-  __c_logger_dump_state((logobj))
+  __c_logger_dump_state((logobj), (v))
 
 #define LOGOBJ_REGISTER_PLUGIN_FACTORY(logobj,plugin_factory) \
   __c_logger_register_plugin_factory((logobj),(plugin_factory))
