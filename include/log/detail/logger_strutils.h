@@ -4,6 +4,7 @@
 #define LOGGER_STRING_UTILS_HEADER
 
 #include <log/logger_config.h>
+#include <log/logger_varargs.h>
 #include <string>
 #include <vector>
 #include <string.h>
