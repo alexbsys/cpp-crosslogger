@@ -46,6 +46,7 @@ public:
 
   bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
     // TODO: TBD
+    (void)plugin_factory_interface;
     return false;
   }
 

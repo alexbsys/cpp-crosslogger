@@ -26,6 +26,9 @@ public:
   }
 
   bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
+    (void)addr;
+    (void)verb_level;
+
     if (cmd_id != kBinaryCommandId)
       return false;
 

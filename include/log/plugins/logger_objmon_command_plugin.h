@@ -38,6 +38,10 @@ public:
   }
 
   bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
+    (void)iparam;
+    (void)addr;
+    (void)verb_level;
+
     std::stringstream out_stream;
     bool processed = false;
 
@@ -65,11 +69,15 @@ public:
   }
 
   virtual bool attach(logger_interface* logger) LOG_METHOD_OVERRIDE {
+    (void)logger;
+
     LOG_MT_MUTEX_INIT(&mutex_objmon_, NULL);
     return true;
   }
 
   virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
+    (void)logger;
+
     LOG_MT_MUTEX_DESTROY(&mutex_objmon_);
   }
 

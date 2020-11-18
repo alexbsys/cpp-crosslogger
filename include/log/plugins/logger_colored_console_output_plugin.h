@@ -34,6 +34,7 @@ public:
   }
 
   void config_updated(const logging::cfg::KeyValueTypeList& config) {
+    (void)config;
     using namespace detail;
   }
   

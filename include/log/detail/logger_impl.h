@@ -870,7 +870,7 @@ private:
   }
 
   void log_cmd_args(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) {
+    const char* source_file, int line_number, const void* vparam, int iparam, va_list args) LOG_METHOD_OVERRIDE {
 
     std::map<int, shared_ptr<logger_plugin_interface> >::const_iterator cmd_it = cmd_refs_.find(cmd_id);
     if (cmd_it == cmd_refs_.end())
@@ -894,8 +894,10 @@ private:
   }
 
   void LOG_CDECL log_cmd_vargs(int cmd_id, int verb_level, void* addr, const char* function_name,
-    const char* source_file, int line_number, const void* vparam, int iparam, ...) {
+    const char* source_file, int line_number, const void* vparam, int iparam, ...) LOG_METHOD_OVERRIDE {
     //TODO: TBD  
+    (void)cmd_id; (void)verb_level; (void)addr; (void)function_name; (void)source_file; (void)line_number; (void)vparam;
+    (void)iparam;
   }
 
 #if !LOG_USE_MODULEDEFINITION

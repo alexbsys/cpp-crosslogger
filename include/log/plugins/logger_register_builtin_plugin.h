@@ -82,7 +82,7 @@ public:
     }
   }
 
-  void config_updated(const logging::cfg::KeyValueTypeList& config) LOG_METHOD_OVERRIDE {}
+  void config_updated(const logging::cfg::KeyValueTypeList& config) LOG_METHOD_OVERRIDE { (void)config; }
 
 private:
   std::string plugin_name_;

@@ -109,6 +109,7 @@ public:
   }
 
   virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
+    (void)logger;
     flush();
     close();
   }

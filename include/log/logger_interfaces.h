@@ -53,10 +53,10 @@ struct logger_plugin_interface {
   /**
    * \brief    configuration update handler. Logger called this method every time when configuration has been updated
    */
-  virtual void config_updated(const logging::cfg::KeyValueTypeList& config) {}
+  virtual void config_updated(const logging::cfg::KeyValueTypeList& config) { (void)config;  }
 
-  virtual bool attach(logger_interface* logger) { return true; }
-  virtual void detach(logger_interface* logger) {}
+  virtual bool attach(logger_interface* logger) { (void)logger; return true; }
+  virtual void detach(logger_interface* logger) { (void)logger; }
 };
 
 struct logger_plugin_factory_interface {
@@ -65,7 +65,6 @@ struct logger_plugin_factory_interface {
   virtual int plugin_type() const { return kLogPluginTypeInvalid; }
   virtual const char* type() const { return ""; }
   virtual logging::shared_ptr<logger_plugin_interface> create(const char* name) = 0;
-//  virtual void destroy(logger_plugin_interface* plugin_interface) = 0;
 };
 
 
@@ -102,7 +101,9 @@ struct logger_output_plugin_interface : public virtual logger_plugin_interface {
   /** 
    * \brief    write method. Called every write to file operation
    */
-  virtual void write(int verb_level, const std::string& hdr, const std::string& what) {}
+  virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
+    (void)verb_level; (void)hdr; (void)what;
+  }
 
   /**
    * \brief    flush output method
@@ -119,34 +120,46 @@ struct logger_config_macro_plugin_interface : public virtual logger_plugin_inter
   virtual ~logger_config_macro_plugin_interface() LOG_METHOD_OVERRIDE {}
 
   virtual int plugin_type() const LOG_METHOD_OVERRIDE { return kLogPluginTypeConfigMacro; }
-  virtual bool process(std::string& str) { return false;  }
+  virtual bool process(std::string& str) { 
+    (void)str;
+    return false;  
+  }
 };
 
 struct logger_config_plugin_interface : public virtual logger_plugin_interface {
   virtual ~logger_config_plugin_interface() LOG_METHOD_OVERRIDE {}
 
   virtual int plugin_type() const LOG_METHOD_OVERRIDE { return kLogPluginTypeConfig; }
-  virtual bool reload(cfg::KeyValueTypeList& config) { return false;  }
+  
+  virtual bool reload(cfg::KeyValueTypeList& config) { 
+    (void)config;
+    return false;  
+  }
 };
 
 
 struct logger_command_plugin_interface : public virtual logger_plugin_interface {
   virtual ~logger_command_plugin_interface() LOG_METHOD_OVERRIDE {}
 
-  virtual void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {}
+  virtual void get_cmd_ids(int* out_cmd_ids, int max_cmds) const { (void)out_cmd_ids; (void)max_cmds; }
 
   virtual int plugin_type() const LOG_METHOD_OVERRIDE { return kLogPluginTypeCommand; }
-  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) { return false; }
+
+  virtual bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) { 
+    (void)out_result; (void)cmd_id; (void)verb_level; (void)addr; (void)vparam; (void)iparam;
+    return false; 
+  }
 };
 
 struct logger_args_command_plugin_interface : public virtual logger_plugin_interface {
   virtual ~logger_args_command_plugin_interface() LOG_METHOD_OVERRIDE {}
 
-  virtual void get_cmd_ids(int* out_cmd_ids, int max_cmds) const {}
+  virtual void get_cmd_ids(int* out_cmd_ids, int max_cmds) const { (void)out_cmd_ids; (void)max_cmds; }
 
   virtual int plugin_type() const LOG_METHOD_OVERRIDE { return kLogPluginTypeArgsCommand; }
   virtual bool cmd_args(std::string& out_result, int cmd_id, int verb_level, void* addr, 
     const void* vparam, int iparam, va_list arguments) {
+    (void)out_result; (void)cmd_id; (void)verb_level; (void)addr; (void)vparam; (void)iparam; (void)arguments;
     return false;
   }
 };

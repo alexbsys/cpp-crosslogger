@@ -33,6 +33,8 @@ public:
   bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
     (void)vparam;
     (void)iparam;
+    (void)addr;
+    (void)verb_level;
 
     using namespace detail;
     if (cmd_id != kStacktraceCommandId)

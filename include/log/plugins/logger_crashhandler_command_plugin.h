@@ -366,6 +366,11 @@ public:
   }
 
   bool cmd(std::string& out_result, int cmd_id, int verb_level, void* addr, const void* vparam, int iparam) LOG_METHOD_OVERRIDE {
+    (void)iparam;
+    (void)vparam;
+    (void)addr;
+    (void)verb_level;
+
     std::stringstream sstream;
     bool result = false;
 
@@ -386,8 +391,8 @@ public:
     return result;
   }
 
-  virtual bool attach(logger_interface* logger) { logger_ = logger; return true; }
-  virtual void detach(logger_interface* logger) { logger_ = NULL;  }
+  virtual bool attach(logger_interface* logger) LOG_METHOD_OVERRIDE { logger_ = logger; return true; }
+  virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE { (void)logger; logger_ = NULL;  }
 
 private:
   std::string plugin_name_;

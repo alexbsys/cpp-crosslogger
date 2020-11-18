@@ -35,6 +35,7 @@ class singleton : public logger_singleton_interface<_TIf> {
   LOG_INLINE _TIf* operator->() { return get(); }
 
   static void delete_fn(_TIf* obj, void* user_param) {
+    (void)user_param;
     delete obj;
   }
 
@@ -73,11 +74,11 @@ class singleton : public logger_singleton_interface<_TIf> {
     if (deref_fn_ && ptr) 
       cnt = (ptr->*deref_fn_)();
 
-    if (cnt == 0 && !need_delete_) {
+    if (cnt == 0 && !need_delete) {
       ptr = NULL;
     }
 
-    if (ptr && need_delete_) delete ptr;
+    if (ptr && need_delete) delete ptr;
   }
 
  private:

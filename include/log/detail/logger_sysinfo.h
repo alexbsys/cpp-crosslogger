@@ -32,25 +32,25 @@ namespace sys_info_win {
     SYSTEM_INFO si;
     ::GetSystemInfo(&si);
 
-    std::string processorInfo;
+    std::string processor_info;
 
     switch (si.wProcessorArchitecture) {
     case PROCESSOR_ARCHITECTURE_INTEL:
-      processorInfo += "IA-32";
+      processor_info.append("IA-32");
       break;
     case PROCESSOR_ARCHITECTURE_AMD64:
-      processorInfo += "AMD64";
+      processor_info.append("AMD64");
       break;
     case PROCESSOR_ARCHITECTURE_IA64:
-      processorInfo += "IA64";
+      processor_info.append("IA64");
       break;
     case PROCESSOR_ARCHITECTURE_UNKNOWN:
     default:
-      processorInfo += "Unknown";
+      processor_info.append("Unknown");
     }
 
-    processorInfo += stringformat(", count: %d", si.dwNumberOfProcessors);
-    return processorInfo;
+    processor_info.append(stringformat(", count: %d", si.dwNumberOfProcessors));
+    return processor_info;
   }
 
   /**
@@ -100,138 +100,139 @@ namespace sys_info_win {
     if (VER_PLATFORM_WIN32_NT != osvi.dwPlatformId || osvi.dwMajorVersion <= 4)
       return false;
 
-    os_version += "Microsoft ";
+    os_version.append("Microsoft ");
 
     if (osvi.dwMajorVersion == 6) {
       if (osvi.dwMinorVersion == 0) {
         if (osvi.wProductType == VER_NT_WORKSTATION)
-          os_version += "Windows Vista ";
+          os_version.append("Windows Vista ");
         else
-          os_version += "Windows Server 2008 ";
+          os_version.append("Windows Server 2008 ");
       }
 
       if (osvi.dwMinorVersion == 1) {
         if (osvi.wProductType == VER_NT_WORKSTATION)
-          os_version += "Windows 7 ";
+          os_version.append("Windows 7 ");
         else
-          os_version += "Windows Server 2008 R2 ";
+          os_version.append("Windows Server 2008 R2 ");
       }
 
       if (osvi.dwMinorVersion == 2) {
         if (osvi.wProductType == VER_NT_WORKSTATION)
-          os_version += "Windows 8 ";
+          os_version.append("Windows 8 ");
         else
-          os_version += "Windows Server 2012 ";
+          os_version.append("Windows Server 2012 ");
       }
 
       if (osvi.dwMinorVersion == 3) {
         if (osvi.wProductType == VER_NT_WORKSTATION)
-          os_version += "Windows 8.1 ";
+          os_version.append("Windows 8.1 ");
         else
-          os_version += "Windows Server 2012 R2 ";
+          os_version.append("Windows Server 2012 R2 ");
       }
 
       GetProductInfo_t get_product_info_fn = reinterpret_cast<GetProductInfo_t>(
-        GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetProductInfo"));
+        GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetProductInfo"));
 
       if (get_product_info_fn) {
         get_product_info_fn(osvi.dwMajorVersion, osvi.dwMinorVersion, 0, 0, &type);
       }
 
       switch (type) {
-      case 0x0000 /*PRODUCT_UNDEFINED*/:               os_version += "(Product undefined)"; break;
-      case 0x0001 /*PRODUCT_ULTIMATE*/:                os_version += "Ultimate";         break;
-      case 0x0002 /*PRODUCT_HOME_BASIC*/:              os_version += "Home Basic";       break;
-      case 0x0003 /*PRODUCT_HOME_PREMIUM*/:            os_version += "Home Premium";     break;
-      case 0x0004 /*PRODUCT_ENTERPRISE*/:              os_version += "Enterprise";       break;
-      case 0x0005 /*PRODUCT_HOME_BASIC_N*/:            os_version += "Home Basic N";     break;
-      case 0x0006 /*PRODUCT_BUSINESS*/:                os_version += "Business";         break;
-      case 0x0007 /*PRODUCT_STANDARD_SERVER*/:         os_version += "Standard Server";  break;
-      case 0x0008 /*PRODUCT_DATACENTER_SERVER*/:       os_version += "Datacenter";       break;
-      case 0x0009 /*PRODUCT_SMALLBUSINESS_SERVER*/:    os_version += "Small Business Server"; break;
-      case 0x000A /*PRODUCT_ENTERPRISE_SERVER*/:       os_version += "Enterprise";       break;
-      case 0x000B /*PRODUCT_STARTER*/:                 os_version += "Starter";          break;
-      case 0x000C /*PRODUCT_DATACENTER_SERVER_CORE*/:  os_version += "Datacenter Edition (core installation)";       break;
-      case 0x000D /*PRODUCT_STANDARD_SERVER_CORE*/:    os_version += "Standard Edition (core installation)";         break;
-      case 0x000E /*PRODUCT_ENTERPRISE_SERVER_CORE*/:  os_version += "Enterprise Edition (core installation)";       break;
-      case 0x000F /*PRODUCT_ENTERPRISE_SERVER_IA64*/:  os_version += "Enterprise Edition for Itanium-based Systems"; break;
-      case 0x0010 /*PRODUCT_BUSINESS_N*/:              os_version += "Business N";       break;
-      case 0x0011 /*PRODUCT_WEB_SERVER*/:              os_version += "Web Server";       break;
-      case 0x0012 /*PRODUCT_CLUSTER_SERVER*/:          os_version += "Cluster Server";   break;
-      case 0x0013 /*PRODUCT_HOME_SERVER*/:             os_version += "Home Server";      break;
-      case 0x0014 /*PRODUCT_STORAGE_EXPRESS_SERVER*/:  os_version += "Storage Express Server";      break;
-      case 0x0015 /*PRODUCT_STORAGE_STANDARD_SERVER*/: os_version += "Storage Standard Server";     break;
-      case 0x0016 /*PRODUCT_STORAGE_WORKGROUP_SERVER*/:os_version += "Storage Workgroup Server";    break;
-      case 0x0017 /*PRODUCT_STORAGE_ENTERPRISE_SERVER*/: os_version += "Storage Enterprise Server"; break;
-      case 0x0018 /*PRODUCT_SERVER_FOR_SMALLBUSINESS*/:os_version += "Server for Small Business";   break;
-      case 0x0019 /*PRODUCT_SMALLBUSINESS_SERVER_PREMIUM*/: os_version += "Small Business Server Premium";  break;
-      case 0x001A /*PRODUCT_HOME_PREMIUM_N*/:          os_version += "Home Premium N"; break;
-      case 0x001B /*PRODUCT_ENTERPRISE_N*/:            os_version += "Enterprise N";   break;
-      case 0x001C /*PRODUCT_ULTIMATE_N*/:              os_version += "Ultimate N";     break;
-      case 0x001D /*PRODUCT_WEB_SERVER_CORE*/:         os_version += "Web Server (core installation)"; break;
-      case 0x0021 /*PRODUCT_SERVER_FOUNDATION*/:       os_version += "Server Foundation";   break;
-      case 0x0022 /*PRODUCT_HOME_PREMIUM_SERVER*/:     os_version += "Home Premium Server"; break;
-      case 0x0023 /*PRODUCT_SERVER_FOR_SMALLBUSINESS_V*/: os_version += "Server for Small Business V"; break;
-      case 0x0024 /*PRODUCT_STANDARD_SERVER_V*/:       os_version += "Standard Server V";   break;
-      case 0x0025 /*PRODUCT_DATACENTER_SERVER_V*/:     os_version += "Datacenter V";        break;
-      case 0x0026 /*PRODUCT_ENTERPRISE_SERVER_V*/:     os_version += "Enterprise V";        break;
-      case 0x0027 /*PRODUCT_DATACENTER_SERVER_CORE_V*/:os_version += "Datacenter V (core installation)";        break;
-      case 0x0028 /*PRODUCT_STANDARD_SERVER_CORE_V*/:  os_version += "Standard Server V (core installation)";   break;
-      case 0x0029 /*PRODUCT_ENTERPRISE_SERVER_CORE_V*/:os_version += "Enterprise Server V (core installation)"; break;
-      case 0x002A /*PRODUCT_HYPERV*/:                  os_version += "HyperV";           break;
-      case 0x002F /*PRODUCT_STARTER_N*/:               os_version += "Starter N";        break;
-      case 0x0030 /*PRODUCT_PROFESSIONAL*/:            os_version += "Professional";     break;
-      case 0x0031 /*PRODUCT_PROFESSIONAL_N*/:          os_version += "Professional N";   break;
-      case 0x0040 /*PRODUCT_CLUSTER_SERVER_V*/:        os_version += "Cluster Server V"; break;
-      case 0x0065 /*PRODUCT_CORE*/:                    os_version += "Core";             break;
-      case 0x006D /*PRODUCT_CORE_SERVER*/:             os_version += "Core Server";      break;
-      case 0xABCDABCD /*PRODUCT_UNLICENSED*/:          os_version += "(Unlicensed)";     break;
-      default:   os_version += str::stringformat("(Not decoded: %.4X)", type);   break;
+      case 0x0000 /*PRODUCT_UNDEFINED*/:               os_version.append("(Product undefined)"); break;
+      case 0x0001 /*PRODUCT_ULTIMATE*/:                os_version.append("Ultimate");         break;
+      case 0x0002 /*PRODUCT_HOME_BASIC*/:              os_version.append("Home Basic");       break;
+      case 0x0003 /*PRODUCT_HOME_PREMIUM*/:            os_version.append("Home Premium");     break;
+      case 0x0004 /*PRODUCT_ENTERPRISE*/:              os_version.append("Enterprise");       break;
+      case 0x0005 /*PRODUCT_HOME_BASIC_N*/:            os_version.append("Home Basic N");     break;
+      case 0x0006 /*PRODUCT_BUSINESS*/:                os_version.append("Business");         break;
+      case 0x0007 /*PRODUCT_STANDARD_SERVER*/:         os_version.append("Standard Server");  break;
+      case 0x0008 /*PRODUCT_DATACENTER_SERVER*/:       os_version.append("Datacenter");       break;
+      case 0x0009 /*PRODUCT_SMALLBUSINESS_SERVER*/:    os_version.append("Small Business Server"); break;
+      case 0x000A /*PRODUCT_ENTERPRISE_SERVER*/:       os_version.append("Enterprise");       break;
+      case 0x000B /*PRODUCT_STARTER*/:                 os_version.append("Starter");          break;
+      case 0x000C /*PRODUCT_DATACENTER_SERVER_CORE*/:  os_version.append("Datacenter Edition (core installation)");       break;
+      case 0x000D /*PRODUCT_STANDARD_SERVER_CORE*/:    os_version.append("Standard Edition (core installation)");         break;
+      case 0x000E /*PRODUCT_ENTERPRISE_SERVER_CORE*/:  os_version.append("Enterprise Edition (core installation)");       break;
+      case 0x000F /*PRODUCT_ENTERPRISE_SERVER_IA64*/:  os_version.append("Enterprise Edition for Itanium-based Systems"); break;
+      case 0x0010 /*PRODUCT_BUSINESS_N*/:              os_version.append("Business N");       break;
+      case 0x0011 /*PRODUCT_WEB_SERVER*/:              os_version.append("Web Server");       break;
+      case 0x0012 /*PRODUCT_CLUSTER_SERVER*/:          os_version.append("Cluster Server");   break;
+      case 0x0013 /*PRODUCT_HOME_SERVER*/:             os_version.append("Home Server");      break;
+      case 0x0014 /*PRODUCT_STORAGE_EXPRESS_SERVER*/:  os_version.append("Storage Express Server");      break;
+      case 0x0015 /*PRODUCT_STORAGE_STANDARD_SERVER*/: os_version.append("Storage Standard Server");     break;
+      case 0x0016 /*PRODUCT_STORAGE_WORKGROUP_SERVER*/:os_version.append("Storage Workgroup Server");    break;
+      case 0x0017 /*PRODUCT_STORAGE_ENTERPRISE_SERVER*/: os_version.append("Storage Enterprise Server"); break;
+      case 0x0018 /*PRODUCT_SERVER_FOR_SMALLBUSINESS*/:os_version.append("Server for Small Business");   break;
+      case 0x0019 /*PRODUCT_SMALLBUSINESS_SERVER_PREMIUM*/: os_version.append("Small Business Server Premium");  break;
+      case 0x001A /*PRODUCT_HOME_PREMIUM_N*/:          os_version.append("Home Premium N"); break;
+      case 0x001B /*PRODUCT_ENTERPRISE_N*/:            os_version.append("Enterprise N");   break;
+      case 0x001C /*PRODUCT_ULTIMATE_N*/:              os_version.append("Ultimate N");     break;
+      case 0x001D /*PRODUCT_WEB_SERVER_CORE*/:         os_version.append("Web Server (core installation)"); break;
+      case 0x0021 /*PRODUCT_SERVER_FOUNDATION*/:       os_version.append("Server Foundation");   break;
+      case 0x0022 /*PRODUCT_HOME_PREMIUM_SERVER*/:     os_version.append("Home Premium Server"); break;
+      case 0x0023 /*PRODUCT_SERVER_FOR_SMALLBUSINESS_V*/: os_version.append("Server for Small Business V"); break;
+      case 0x0024 /*PRODUCT_STANDARD_SERVER_V*/:       os_version.append("Standard Server V");   break;
+      case 0x0025 /*PRODUCT_DATACENTER_SERVER_V*/:     os_version.append("Datacenter V");        break;
+      case 0x0026 /*PRODUCT_ENTERPRISE_SERVER_V*/:     os_version.append("Enterprise V");        break;
+      case 0x0027 /*PRODUCT_DATACENTER_SERVER_CORE_V*/:os_version.append("Datacenter V (core installation)");        break;
+      case 0x0028 /*PRODUCT_STANDARD_SERVER_CORE_V*/:  os_version.append("Standard Server V (core installation)");   break;
+      case 0x0029 /*PRODUCT_ENTERPRISE_SERVER_CORE_V*/:os_version.append("Enterprise Server V (core installation)"); break;
+      case 0x002A /*PRODUCT_HYPERV*/:                  os_version.append("HyperV");           break;
+      case 0x002F /*PRODUCT_STARTER_N*/:               os_version.append("Starter N");        break;
+      case 0x0030 /*PRODUCT_PROFESSIONAL*/:            os_version.append("Professional");     break;
+      case 0x0031 /*PRODUCT_PROFESSIONAL_N*/:          os_version.append("Professional N");   break;
+      case 0x0040 /*PRODUCT_CLUSTER_SERVER_V*/:        os_version.append("Cluster Server V"); break;
+      case 0x0065 /*PRODUCT_CORE*/:                    os_version.append("Core");             break;
+      case 0x006D /*PRODUCT_CORE_SERVER*/:             os_version.append("Core Server");      break;
+      case 0xABCDABCD /*PRODUCT_UNLICENSED*/:          os_version.append("(Unlicensed)");     break;
+      default:   os_version.append(str::stringformat("(Not decoded: %.4X)", type));   break;
       }
     }
 
     if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2) {
       if (GetSystemMetrics(SM_SERVERR2))
-        os_version += "Windows Server 2003 R2, ";
+        os_version.append("Windows Server 2003 R2, ");
       else if (osvi.wSuiteMask & VER_SUITE_STORAGE_SERVER)
-        os_version += "Windows Storage Server 2003";
+        os_version.append("Windows Storage Server 2003");
       else if (osvi.wSuiteMask & VER_SUITE_WH_SERVER)
-        os_version += "Windows Home Server";
+        os_version.append("Windows Home Server");
       else if (osvi.wProductType == VER_NT_WORKSTATION &&
         si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
-        os_version += "Windows XP Professional x64 Edition";
+        os_version.append("Windows XP Professional x64 Edition");
       }
-      else
-        os_version += "Windows Server 2003, ";
+      else {
+        os_version.append("Windows Server 2003, ");
+      }
 
       // Test for the server type.
       if (osvi.wProductType != VER_NT_WORKSTATION) {
         if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64) {
           if (osvi.wSuiteMask & VER_SUITE_DATACENTER)
-            os_version += "Datacenter Edition for Itanium-based Systems";
+            os_version.append("Datacenter Edition for Itanium-based Systems");
           else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-            os_version += "Enterprise Edition for Itanium-based Systems";
+            os_version.append("Enterprise Edition for Itanium-based Systems");
         }
 
         else if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) {
           if (osvi.wSuiteMask & VER_SUITE_DATACENTER)
-            os_version += "Datacenter x64 Edition";
+            os_version.append("Datacenter x64 Edition");
           else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-            os_version += "Enterprise x64 Edition";
+            os_version.append("Enterprise x64 Edition");
           else
-            os_version += "Standard x64 Edition";
+            os_version.append("Standard x64 Edition");
         }
         else {
           if (osvi.wSuiteMask & VER_SUITE_COMPUTE_SERVER)
-            os_version += "Compute Cluster Edition";
+            os_version.append("Compute Cluster Edition");
           else if (osvi.wSuiteMask & VER_SUITE_DATACENTER)
-            os_version += "Datacenter Edition";
+            os_version.append("Datacenter Edition");
           else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-            os_version += "Enterprise Edition";
+            os_version.append("Enterprise Edition");
           else if (osvi.wSuiteMask & VER_SUITE_BLADE)
-            os_version += "Web Edition";
+            os_version.append("Web Edition");
           else
-            os_version += "Standard Edition";
+            os_version.append("Standard Edition");
         }
       }
     }
@@ -239,39 +240,39 @@ namespace sys_info_win {
     if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
       os_version += "Windows XP ";
       if (osvi.wSuiteMask & VER_SUITE_PERSONAL)
-        os_version += "Home Edition";
+        os_version.append("Home Edition");
       else
-        os_version += "Professional";
+        os_version.append("Professional");
     }
 
     if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 0) {
-      os_version += "Windows 2000 ";
+      os_version.append("Windows 2000 ");
 
       if (osvi.wProductType == VER_NT_WORKSTATION) {
-        os_version += "Professional";
+        os_version.append("Professional");
       }
       else {
         if (osvi.wSuiteMask & VER_SUITE_DATACENTER)
-          os_version += "Datacenter Server";
+          os_version.append("Datacenter Server");
         else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-          os_version += "Advanced Server";
+          os_version.append("Advanced Server");
         else
-          os_version += "Server";
+          os_version.append("Server");
       }
     }
 
     if (strlen(osvi.szCSDVersion) > 0) {
-      os_version += " ";
-      os_version += osvi.szCSDVersion;
+      os_version.append(" ");
+      os_version.append(osvi.szCSDVersion);
     }
 
-    os_version += str::stringformat(" (build %d)", osvi.dwBuildNumber);
+    os_version.append(str::stringformat(" (build %d)", osvi.dwBuildNumber));
 
     if (osvi.dwMajorVersion >= 6) {
       if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
-        os_version += ", 64-bit";
+        os_version.append(", 64-bit");
       else if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
-        os_version += ", 32-bit";
+        os_version.append(", 32-bit");
     }
 
     return true;
