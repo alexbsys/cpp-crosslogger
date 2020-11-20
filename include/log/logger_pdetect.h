@@ -86,13 +86,169 @@
 #define LOG_PLATFORM_WINDOWS
 #endif  //_WIN32
 
+#ifdef __ANDROID__
+#define LOG_PLATFORM_ANDROID
+#endif /*__ANDROID__*/
 
-#if defined(_AMD64_) || defined(__LP64__) || defined(_LP64)
+
+/* CPU detection section */
+
+#undef LOG_CPU_DETECTED
+
+/* Intel amd64 */
+#if defined(_AMD64_) || defined(__amd64__) \
+    || defined(__amd64) || defined(__x86_64) || defined(_M_AMD64) || defined(__x86_64__)
+
+#pragma message "Detected Intel AMD64"
 #  define LOG_PLATFORM_64BIT
-#else  // defined(_AMD64_) || defined(__LP64__) || defined(_LP64)
-#  define LOG_PLATFORM_32BIT
-#endif  // defined(_AMD64_) || defined(__LP64__) || defined(_LP64)
+#  define LOG_CPU_INTEL
+#  define LOG_CPUARCH_IA32
+#  define LOG_CPU_ARCH  IA32
 
+#  define LOG_CPU_DETECTED 1
+#endif /* Intel amd64 */
+
+/* Intel Itanium IA-64 */
+#if (defined(__ia64__) || defined(_IA64) || defined(__IA64__) || defined(__ia64) \
+    || defined(_M_IA64) || defined(__itanium__)) \
+    && !defined(LOG_CPU_DETECTED)
+#  define LOG_PLATFORM_64BIT
+#  define LOG_CPU_INTEL
+#  define LOG_CPUARCH_IA64
+#  define LOG_CPU_ARCH  IA64
+
+#  define LOG_CPU_DETECTED 1
+#endif /*Intel itanium IA-64*/
+
+
+/* MIPS */
+#if (defined(__mips__) || defined(mips) || defined(__mips) || defined(__MIPS__)) \
+    && !defined(LOG_CPU_DETECTED)
+#  define LOG_PLATFORM_32BIT
+#  define LOG_CPU_MIPS
+#  define LOG_CPUARCH_MIPS
+#  define LOG_CPU_ARCH MIPS
+
+#define LOG_CPU_DETECTED 1
+#endif /*MIPS*/
+
+
+/*PowerPC*/
+#if (defined(__powerpc) || defined(__powerpc__) || defined(__POWERPC__) || defined(__powerpc64__) \
+    || defined(__ppc__) || defined(__ppc64__) || defined(__PPC__) || defined(__PPC64__) || defined(_ARCH_PPC) \
+    || defined(_ARCH_PPC64) || defined(_M_PPC)) \
+    && !defined(LOG_CPU_DETECTED)
+#  define LOG_CPU_POWERPC
+#  define LOG_CPUARCH_POWERPC
+#  define LOG_CPU_ARCH  POWERPC
+
+#  if defined(_ARCH_PPC64) || defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__)
+#    define LOG_PLATFORM_64BIT
+#  else /*PPC64*/
+#    define LOG_PLATFORM_32BIT
+#  endif /*PPC64*/
+
+#define LOG_CPU_DETECTED 1
+#endif /*PowerPC*/
+
+/*TMS320*/
+#if (defined(_TMS320C2XX) || defined(__TMS320C2000__) || defined(_TMS320C5X) \
+    || defined(__TMS320C55X__) || defined(_TMS320C6X) || defined(__TMS320C6X__))
+    && !defined(LOG_CPU_DETECTED)
+#  define LOG_CPU_TMS320
+#  define LOG_CPUARCH_TMS320
+#  define LOG_CPU_ARCH  TMS320
+
+#define LOG_PLATFORM_32BIT
+#define LOG_CPU_DETECTED 1
+#endif /*TMS320*/
+
+/* ARM */
+#if (defined (_M_ARM) || defined(__ARM_ARCH) || defined(__thumb__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) \
+    || defined(_ARM) || defined(_M_ARMT) || defined(__arm)) \
+    && !defined(LOG_CPU_DETECTED)
+#pragma message "Detected ARM"
+
+#  define LOG_CPU_ARM
+
+#  if defined(__ARM_ARCH_3__)
+#    define LOG_CPU_ARCH ARM3
+#    define LOG_CPUARCH_ARM3
+#  endif /*__ARM_ARCH_3__*/
+
+#  if defined(__ARM_ARCH_3M__)
+#    define LOG_CPU_ARCH ARM3M
+#    define LOG_CPUARCH_ARM3M
+#  endif /*__ARM_ARCH_3M__*/
+
+#  if defined(__ARM_ARCH_5__) || (_M_ARM==5)
+#    define LOG_CPU_ARCH ARM5
+#    define LOG_CPUARCH_ARM5
+#  endif /*__ARM_ARCH_5__*/
+
+#  if defined(__ARM_ARCH_5E__) || (_M_ARM==5)
+#    define LOG_CPU_ARCH ARM5E
+#    define LOG_CPUARCH_ARM5E
+#  endif /*__ARM_ARCH_5E__*/
+
+#  if defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_6J__) || defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) \
+    || defined(__ARM_ARCH_6ZK__) || (_M_ARM==6)
+#    define LOG_CPU_ARCH ARM6
+#    define LOG_CPUARCH_ARM6
+#endif /*ARM6*/
+
+#  if defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) \
+    || defined(__ARM_ARCH_7S__) || (_M_ARM==7)
+#    define LOG_CPU_ARCH ARM7
+#    define LOG_CPUARCH_ARM7
+#endif /*ARM7*/
+
+/* ARM64 */
+#  if defined(__aarch64__) || defined(__ARM_ARCH_ISA_A64) /* arm 64 bit ? */
+#    define LOG_PLATFORM_64BIT
+#    define LOG_CPU_DETECTED 1
+#  endif /*__aarch64__*/
+
+/* ARM32 */
+#  if defined(__arm__) && !defined(__arch64__) && !defined(__ARM_ARCH_ISA_A64)  /* arm 32 bit? */
+#    define LOG_PLATFORM_32BIT
+#    define LOG_CPU_DETECTED 1
+#  endif /*__arm*__*/
+#endif /*_M_ARM || __ARM_ARCH*/
+
+/* Alpha */
+#  if (defined(__alpha__) || defined(__alpha) || defined(_M_ALPHA)) && !defined(LOG_CPU_DETECTED)
+
+#    if defined(__alpha_ev4__) || (_M_ALPHA==4)
+#      define LOG_CPU_ARCH ALPHAEV4
+#      define LOG_CPUARCH_ALPHAEV4
+#    endif /*__alpha_ev4__*/
+
+#    if defined(__alpha_ev5__) || (_M_ALPHA==5)
+#      define LOG_CPU_ARCH ALPHAEV5
+#      define LOG_CPUARCH_ALPHAEV5
+#    endif /*__alpha_ev5__*/
+
+#    if defined(__alpha_ev6__) || (_M_ALPHA==6)
+#      define LOG_CPU_ARCH ALPHAEV6
+#      define LOG_CPUARCH_ALPHAEV6
+#    endif /*__alpha_ev6__*/
+
+#    define LOG_PLATFORM_32BIT
+#    define LOG_CPU_ALPHA
+#    define LOG_CPU_DETECTED 1
+#  endif /*alpha*/
+
+/* Intel x86 */
+#if (defined(__386__) || defined(_M_I386) || defined(__i386) || defined(_M_IX86) \
+    || defined(_X86_) || defined(__I86__) || defined(__X86__) || defined(__i686__) || defined(__i586__) || defined(__i486__)) \
+    && !defined(LOG_CPU_DETECTED)
+#  define LOG_CPU_ARCH  IA32
+#  define LOG_CPUARCH_IA32
+#  define LOG_CPU_INTEL
+#  define LOG_PLATFORM_32BIT
+#  define LOG_CPU_DETECTED 1
+#endif /* Intel X86 */
 
 ////////////////// Platform detection end ////////////////////
 //////////////////////////////////////////////////////////////

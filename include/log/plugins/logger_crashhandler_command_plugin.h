@@ -254,17 +254,31 @@ class unhandled_exceptions_processor {
 static void crash_handler(int sig, siginfo_t* info, void* secret) {
   using namespace detail;
 
-  void* trace[1024];
+//  void* trace[1024];
   ucontext_t* uc = (ucontext_t*)secret;
   logging::logger_interface* logger_obj = NULL;
+  void* pc = NULL;
+
+  if (uc) {
+#if defined(LOG_CPU_INTEL)
+#ifdef LOG_PLATFORM_64BIT
+    pc = (void*)uc->uc_mcontext.gregs[REG_RIP];
+#endif  // LOG_PLATFORM_64BIT
+#ifdef LOG_PLATFORM_32BIT
+    pc = (void*)uc->uc_mcontext.gregs[REG_EIP];
+#endif  // LOG_PLATFORM_32BIT
+#endif /*LOG_CPU_INTEL*/
+
+#if defined(LOG_CPU_ARM)
+#ifdef LOG_PLATFORM_32BIT
+    pc = (void*)uc->uc_mcontext.fault_address;
+#endif /*LOG_PLATFORM_32BIT*/
 
 #ifdef LOG_PLATFORM_64BIT
-  void* pc = (void*)uc->uc_mcontext.gregs[REG_RIP];
-#endif  // LOG_PLATFORM_64BIT
-
-#ifdef LOG_PLATFORM_32BIT
-  void* pc = (void*)uc->uc_mcontext.gregs[REG_EIP];
-#endif  // LOG_PLATFORM_32BIT
+    pc = (void*)uc->uc_mcontext.fault_address;
+#endif /*LOG_PLATFORM_64BIT*/
+#endif /*LOG_CPU_ARM*/
+  }
 
 #if LOG_SHARED
   logger_obj = reinterpret_cast<logging::logger_interface*>(logging::detail::shared_obj::try_find_shared_object(0));
@@ -273,7 +287,13 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
 #endif
 
   if (!logger_obj) {
-    return;
+#if LOG_ANDROID_SYSLOG
+    __android_log_write(ANDROID_LOG_FATAL, "LOGGER", "FATAL: cannot find logger object");
+#endif  // LOG_ANDROID_SYSLOG
+
+    printf("FATAL: cannot find logger object\n");
+    abort();
+    exit(-1);
   }
 
   std::string message = str::stringformat("*** Got signal %d, faulty address %p, from %p", sig,
@@ -287,13 +307,13 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   LOGOBJ_CMD(logger_obj, 0x1002, logger_verbose_fatal, NULL, 0);
 //  LOG_MODULES_FATAL;
 
-  int trace_size = backtrace(trace, 1024);
-  trace[1] = pc;
+//  int trace_size = backtrace(trace, 1024);
+//  trace[1] = pc;
 
-  std::string result =
-      "\n" + runtime_debugging::get_stack_trace_string(trace, trace_size, 0);
+  std::string result;
+  runtime_debugging::get_current_stack_trace_string(&result, 0);
 
-  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** STACKTRACE ***");
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** STACKTRACE ***\n");
   LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, result.c_str());
   LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** END STACKTRACE ***");
 
@@ -309,9 +329,14 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
 #endif  // LOG_RELEASE_ON_APP_CRASH
 
 #if LOG_SHOW_MESSAGE_ON_FATAL_CRASH
+#  if LOG_ANDROID_SYSLOG
+    __android_log_write(ANDROID_LOG_FATAL, "LOGGER", message.c_str());
+#  endif  // LOG_ANDROID_SYSLOG
+
   printf("%s\n", message.c_str());
 #endif  // LOG_SHOW_MESSAGE_ON_FATAL_CRASH
 
+  abort();
   exit(-1);
 }
 
@@ -331,11 +356,12 @@ static void init_unhandled_exceptions_handler(logger_interface* logger_obj) {
 
 
 #else   // LOG_PLATFORM_WINDOWS
+  (void)logger_obj;
   struct sigaction sa;
 
   sa.sa_sigaction = crash_handler;
   sigemptyset(&sa.sa_mask);
-  sa.sa_flags = SA_RESTART;
+  sa.sa_flags = 0; // SA_RESTART;
 
   sigaction(SIGSEGV, &sa, NULL);
 #endif  // LOG_PLATFORM_WINDOWS

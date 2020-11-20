@@ -120,8 +120,21 @@
 
 #if !defined(LOG_PLATFORM_WINDOWS) && LOG_AUTO_DEBUGGING
 #include <cxxabi.h>
-#include <execinfo.h>
+#  if !defined(LOG_PLATFORM_ANDROID)
+#    define LOG_USE_GLIBCBACKTRACE
+#  else /*LOG_PLATFORM_ANDROID*/
+#    define LOG_USE_SYSUNWIND
+#  endif /*LOG_PLATFORM_ANDROID*/
 #endif  //! defined(LOG_PLATFORM_WINDOWS) && LOG_AUTO_DEBUGGING
+
+
+#if defined(LOG_USE_GLIBCBACKTRACE)
+#    include <execinfo.h>
+#endif /*LOG_USE_GLIBCBACKTRACE*/
+
+#if defined(LOG_USE_SYSUNWIND)
+#    include <unwind.h>
+#endif /*LOG_USE_SYSUNWIND*/
 
 #if !defined(LOG_PLATFORM_WINDOWS) && LOG_UNHANDLED_EXCEPTIONS
 #include <signal.h>

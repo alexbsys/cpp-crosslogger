@@ -24,8 +24,7 @@ public:
 
   logger_scroll_file_output_plugin(const char* output_name = NULL)
     : cur_file_size_(0)
-    , name_(output_name == NULL ? std::string() : output_name)
-    , first_write_(true) {
+    , name_(output_name == NULL ? std::string() : output_name) {
   }
 
   const char* type() const LOG_METHOD_OVERRIDE {
@@ -70,6 +69,16 @@ public:
     if ((verb_level & config_.verbose_level_) == 0)
       return;
 
+    std::string str = hdr;
+    if (hdr.size()) str.append(" ");
+    str += what + std::string("\n");
+
+#if LOG_ANDROID_SYSLOG
+    __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
+#else  // LOG_ANDROID_SYSLOG
+    stream_ << str;
+#endif  // LOG_ANDROID_SYSLOG
+
     if (!stream_.is_open())
       stream_.open(config_.full_log_file_path_.c_str(), std::ios::app);
 
@@ -80,17 +89,7 @@ public:
       scroll_files();
     }
 
-    std::string str = hdr;
-    if (hdr.size()) str.append(" ");
-    str += what + std::string("\n");
-
     cur_file_size_ += static_cast<int>(str.size());
-
-#if LOG_ANDROID_SYSLOG
-    __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
-#else  // LOG_ANDROID_SYSLOG
-    stream_ << str;
-#endif  // LOG_ANDROID_SYSLOG
 
     if (config_.flush_every_write_) {
       stream_.flush();
@@ -266,7 +265,6 @@ private:
   std::ofstream stream_;
   int cur_file_size_;
   std::string name_;
-  bool first_write_;
 };
 
 

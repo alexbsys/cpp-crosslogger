@@ -74,10 +74,10 @@ public:
   logger_plugin_default_factory(const std::string& plugin_type_name, int plugin_type)
     : plugin_type_name_(plugin_type_name), plugin_type_(plugin_type) {}
 
-  virtual ~logger_plugin_default_factory() {}
+  virtual ~logger_plugin_default_factory() LOG_METHOD_OVERRIDE {}
 
-  const char* type() const { return plugin_type_name_.c_str(); }
-  int plugin_type() const { return plugin_type_; }
+  const char* type() const LOG_METHOD_OVERRIDE { return plugin_type_name_.c_str(); }
+  int plugin_type() const LOG_METHOD_OVERRIDE { return plugin_type_; }
 
   virtual logging::shared_ptr<logger_plugin_interface> create(const char* name) LOG_METHOD_OVERRIDE {
     return logging::shared_ptr<logger_plugin_interface>(new T(name));

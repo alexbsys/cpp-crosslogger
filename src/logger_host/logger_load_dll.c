@@ -216,8 +216,12 @@ void logger_restore_dummies()
 #	define LOG_GET_PROC_ADDRESS dlsym
 
 # ifndef LOG_DLL_NAME
-#  if LOG_PLATFORM_ANDROID
+#  if defined(LOG_PLATFORM_ANDROID)
+#    if defined(LOG_PLATFORM_64BIT)
+#	   define LOG_DLL_NAME 		"liblogger_dll_arm64-v8a.so"
+#    elif defined(LOG_PLATFORM_32BIT)
 #	   define LOG_DLL_NAME 		"liblogger_dll_armeabi-v7a.so"
+#    endif /*LOG_PLATFORM_XXX*/
 #  else //LOG_PLATFORM_ANDROID
 #    ifdef LOG_PLATFORM_MAC
 #    define LOG_DLL_NAME        "liblogger_dll.dylib"
@@ -280,7 +284,7 @@ int LOG_CDECL logger_load_dll_functions(void* logger_dll_handle) {
   c_logger_get_version = (unsigned int(LOG_CDECL*)(void* logobj))
     LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_get_version");
 
-  c_logger_is_master = (unsigned int(LOG_CDECL*)(void* logobj))
+  c_logger_is_master = (int(LOG_CDECL*)(void* logobj))
     LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_is_master");
 
   __c_logger_get_logger = (void*(LOG_CDECL*)())
@@ -290,10 +294,10 @@ int LOG_CDECL logger_load_dll_functions(void* logger_dll_handle) {
 }
 
 int LOG_CDECL logger_load_dll() {
-#ifndef LOG_PLATFORM_WINDOWS
+#if !defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_ANDROID)
     char libpath[512];
     int pos;
-#endif //LOG_PLATFORM_WINDOWS
+#endif /*!defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_ANDROID)*/
 
 	if (__logger_dll_handle)
 		return 1;
@@ -308,7 +312,7 @@ int LOG_CDECL logger_load_dll() {
 #else //LOG_PLATFORM_WINDOWS
 
 
-#if LOG_PLATFORM_ANDROID
+#ifdef LOG_PLATFORM_ANDROID
   __logger_dll_handle = dlopen(LOG_DLL_NAME, RTLD_LAZY);
 #else //LOG_PLATFORM_ANDROID
 
@@ -340,9 +344,9 @@ int LOG_CDECL logger_load_dll() {
     __logger_dll_handle = dlopen(LOG_DLL_NAME, RTLD_LAZY);
   }
 
-#endif //not LOG_PLATFORM_ANDROID
+#endif /*not LOG_PLATFORM_ANDROID*/
 
-#endif //LOG_PLATFORM_WINDOWS
+#endif /*LOG_PLATFORM_WINDOWS*/
 
   if (!__logger_dll_handle) {
     return 0;

@@ -387,12 +387,148 @@ public:
     return sstream.str();
   }
 
-  static std::string get_stack_trace_string(CONTEXT* c, int ignoreFunctions = 0, const std::string& config_sym_path = std::string()) {
-    return get_stack_trace_string(NULL, *c, ignoreFunctions, config_sym_path);
+  static std::string get_stack_trace_string(CONTEXT* c, int ignore_functions = 0, const std::string& config_sym_path = std::string()) {
+    return get_stack_trace_string(NULL, *c, ignore_functions, config_sym_path);
   }
+
+
+  static LONG WINAPI exception_catch_stack_trace_filter(EXCEPTION_POINTERS* exp,
+    DWORD exp_code,
+    std::string* stack_trace,
+    const std::string* sym_path,
+    int ignore_functions) {
+    (void)exp_code;
+
+    std::string config_sym_path = *sym_path;
+    *stack_trace = detail::runtime_debugging::get_stack_trace_string(exp->ContextRecord, ignore_functions + 2, config_sym_path);
+    return EXCEPTION_EXECUTE_HANDLER;
+  }
+
+#ifdef LOG_COMPILER_MSVC
+#pragma optimize("", off)
+#endif  // LOG_COMPILER_MSVC
+
+  static void get_current_stack_trace_string(std::string* stack_trace, const std::string* config_sym_path, int ignore_functions) {
+    __try {
+      volatile int a = 10;
+      volatile int b = 0;
+      a = a / b;  // division by zero
+    }
+    __except (exception_catch_stack_trace_filter(GetExceptionInformation(),
+      GetExceptionCode(), stack_trace, config_sym_path, ignore_functions)) {
+    }
+  }
+
+#ifdef LOG_COMPILER_MSVC
+#pragma optimize("", on)
+#endif  // LOG_COMPILER_MSVC
+
 
 #else  // defined(LOG_PLATFORM_WINDOWS)
 
+
+  static std::string demangle_sym(const char* fn_name) {
+    size_t funcnamesize = 256;
+    char* funcname = (char*)malloc(funcnamesize);
+    std::string result;
+    int status;
+
+    char* ret =
+#if defined(LOG_PLATFORM_ANDROID)
+            __cxxabiv1::__cxa_demangle
+#else  /*LOG_PLATFORM_ANDROID*/
+            abi::__cxa_demangle
+#endif /*LOG_PLATFORM_ANDROID*/
+            (fn_name, funcname, &funcnamesize, &status);
+    if (status == 0) {
+      funcname = ret;  // use possibly realloc()-ed string
+      result = ret;
+    }
+    else {
+      // demangling failed. Output function name as a C function with
+      // no arguments.
+      result = fn_name;
+    }
+
+    if (funcname)
+      free(funcname);
+
+    return result;
+  }
+
+#  if defined(LOG_USE_SYSUNWIND)
+public:
+
+  struct sysunwind_backtrace_state {
+    void **current;
+    void **end;
+  };
+
+  static _Unwind_Reason_Code sysunwind_unwind_callback(struct _Unwind_Context* context,
+                                              void* arg) {
+    sysunwind_backtrace_state* state = (sysunwind_backtrace_state *)arg;
+    uintptr_t pc = _Unwind_GetIP(context);
+    if (pc) {
+      if (state->current == state->end) {
+        return _URC_END_OF_STACK;
+      } else {
+        *state->current++ = reinterpret_cast<void*>(pc);
+      }
+    }
+    return _URC_NO_REASON;
+  }
+
+
+  static std::string get_stack_trace_string(void* trace[], int trace_len, int ignore_functions = 0) {
+    std::string result;
+    int print_idx = 0;
+
+    for (int idx = 0; idx < trace_len; idx++) {
+      const void* addr = trace[idx];
+      const char* symbol = "";
+
+      if (ignore_functions) {
+        --ignore_functions;
+        continue;
+      }
+
+      result += str::stringformat(" [%d] <-- (%p) ", print_idx++, addr);
+
+      Dl_info info;
+      if (dladdr(addr, &info) && info.dli_sname) {
+        symbol = info.dli_sname;
+      }
+
+      unsigned long long addr_offset = reinterpret_cast<unsigned long long>(addr) -
+              reinterpret_cast<unsigned long long>(info.dli_saddr);
+
+      std::string sym_name = demangle_sym(symbol);
+      result.append(str::stringformat("  %s: (%p) %s+0x%X\n", info.dli_fname, info.dli_saddr, sym_name.c_str(), addr_offset));
+    }
+
+    return result;
+  }
+
+  static void get_current_stack_trace_string(std::string* out_result, int ignore_functions) {
+    const int kMaxBacktraceDepth = 1024;
+    void* trace[kMaxBacktraceDepth];
+
+    sysunwind_backtrace_state state;
+    state.current = trace;
+    state.end = trace + kMaxBacktraceDepth;
+
+    _Unwind_Backtrace(sysunwind_unwind_callback, &state);
+
+    int trace_len = (int)(state.current - trace);
+
+    std::string result = get_stack_trace_string(trace, trace_len, ignore_functions);
+    if (out_result)
+      *out_result = result;
+  }
+
+#  else /*LOG_USE_SYSUNWIND*/
+
+#  if defined (LOG_USE_GLIBCBACKTRACE)
 public:
   static std::string get_stack_trace_string(void* trace[], int trace_len,
     int ignore_functions = 0) {
@@ -458,7 +594,19 @@ public:
 
     return result;
   }
-#endif  // defined(LOG_PLATFORM_WINDOWS)
+
+  void get_current_stack_trace_string(std::string* stack_trace, int ignore_functions) {
+    const int kStackTraceMaxDepth = 1024;
+
+    void* bt[kStackTraceMaxDepth];
+    int bt_size = backtrace(bt, kStackTraceMaxDepth);
+    *stack_trace = get_stack_trace_string(bt, bt_size, ignore_functions + 1);
+  }
+#endif /*LOG_USE_GLIBCBACKTRACE*/
+
+#endif  // not LOG_USE_SYSUNWIND
+
+#endif  // not defined(LOG_PLATFORM_WINDOWS)
 };
 
 }//namespace detail

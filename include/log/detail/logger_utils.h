@@ -5,6 +5,10 @@
 #include <log/logger_pdetect.h>
 #include <log/logger_sysinclib.h>
 
+#ifdef LOG_PLATFORM_ANDROID
+#include <sys/prctl.h>
+#endif /*LOG_PLATFORM_ANDROID*/
+
 namespace logging {
 namespace detail {
 
@@ -37,13 +41,29 @@ public:
     }
 #pragma warning(pop)
 
+#else /*LOG_PLATFORM_WINDOWS*/
+
+#  ifdef LOG_PLATFORM_ANDROID
+    (void)thread_id;
+    prctl(PR_SET_NAME, (unsigned long) thread_name, 0, 0, 0);
+#  else /*LOG_PLATFORM_ANDROID*/
+    // unix has no thread names by default
+    (void)thread_id; (void)thread_name;
+#  endif /*LOG_PLATFORM_ANDROID*/
+
+
 #endif /*LOG_PLATFORM_WINDOWS*/
+
   }
 
   static void set_current_thread_name(const char* thread_name) {
 #ifdef LOG_PLATFORM_WINDOWS
     set_thread_name(GetCurrentThreadId(), thread_name);
 #endif /*LOG_PLATFORM_WINDOWS*/
+
+#ifdef LOG_PLATFORM_ANDROID
+    set_thread_name(0, thread_name);
+#endif /*LOG_PLATFORM_ANDROID*/
   }
 
   static struct tm get_time(int& millisec) {

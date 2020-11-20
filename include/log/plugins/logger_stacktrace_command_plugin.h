@@ -40,58 +40,19 @@ public:
     if (cmd_id != kStacktraceCommandId)
       return false;
 
-    get_current_stack_trace_string(&out_result);
+#ifdef LOG_PLATFORM_WINDOWS
+    detail::runtime_debugging::get_current_stack_trace_string(&out_result, &config_sym_path_, 0);
+#else /*LOG_PLATFORM_WINDOWS*/
+    detail::runtime_debugging::get_current_stack_trace_string(&out_result, 0);
+#endif /*LOG_PLATFORM_WINDOWS*/
     return true;
   }
 
-  void config_updated(const logging::cfg::KeyValueTypeList& config) {
+  void config_updated(const logging::cfg::KeyValueTypeList& config) LOG_METHOD_OVERRIDE {
     config_sym_path_ = detail::cfg::get_logcfg_string(config, "runtime_debugging", std::string(), "SymPath", ".");
   }
 
 private:
-
-#ifdef LOG_PLATFORM_WINDOWS
-  LONG WINAPI exception_catch_stack_trace_filter(EXCEPTION_POINTERS* exp,
-    DWORD exp_code,
-    std::string* stack_trace,
-    std::string* sym_path) {
-    (void)exp_code;
-
-    std::string config_sym_path = *sym_path;
-    *stack_trace = detail::runtime_debugging::get_stack_trace_string(exp->ContextRecord, 2, config_sym_path);
-    return EXCEPTION_EXECUTE_HANDLER;
-  }
-
-#ifdef LOG_COMPILER_MSVC
-#pragma optimize("", off)
-#endif  // LOG_COMPILER_MSVC
-
-  void get_current_stack_trace_string(std::string* stack_trace) {
-    __try {
-      volatile int a = 10;
-      volatile int b = 0;
-      a = a / b;  // division by zero
-    }
-    __except (exception_catch_stack_trace_filter(GetExceptionInformation(),
-      GetExceptionCode(), stack_trace, &config_sym_path_)) {
-    }
-  }
-
-#ifdef LOG_COMPILER_MSVC
-#pragma optimize("", on)
-#endif  // LOG_COMPILER_MSVC
-
-#else   // LOG_PLATFORM_WINDOWS
-
-  void get_current_stack_trace_string(std::string* stack_trace) {
-    const int kStackTraceMaxDepth = 1024;
-
-    void* bt[kStackTraceMaxDepth];
-    int bt_size = backtrace(bt, kStackTraceMaxDepth);
-    *stack_trace = detail::runtime_debugging::get_stack_trace_string(bt, bt_size, 1);
-  }
-#endif  // LOG_PLATFORM_WINDOWS
-
   std::string plugin_name_;
   std::string config_sym_path_;
 };

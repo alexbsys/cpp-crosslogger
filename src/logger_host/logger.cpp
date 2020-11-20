@@ -86,7 +86,7 @@ unsigned int c_logger_get_version(void* logobj) {
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)
-    return NULL;
+    return 0;
 
   return logi->get_version();
 }
@@ -97,7 +97,7 @@ unsigned int c_logger_is_master(void* logobj) {
   logging::logger_interface* logi = reinterpret_cast<logging::logger_interface*>(log_interface_vptr);
 
   if (!logi)
-    return NULL;
+    return 0;
 
   return logi->is_master() ? 1 : 0;
 }

@@ -17,23 +17,21 @@ namespace logging {
 
 class logger_colored_console_output_plugin : public logger_output_plugin_interface {
 public:
-  virtual ~logger_colored_console_output_plugin() {}
+  virtual ~logger_colored_console_output_plugin() LOG_METHOD_OVERRIDE {}
 
   logger_colored_console_output_plugin(const char* output_name = NULL)
-    : log_flush_every_write_(false)
-    , name_(output_name == NULL ? std::string() : output_name)
-    , first_write_(true) {
+    : name_(output_name == NULL ? std::string() : output_name) {
   }
 
-  const char* type() const {
+  const char* type() const LOG_METHOD_OVERRIDE {
     return "console_output";
   }
 
-  const char* name() const {
+  const char* name() const LOG_METHOD_OVERRIDE {
     return name_.c_str();
   }
 
-  void config_updated(const logging::cfg::KeyValueTypeList& config) {
+  void config_updated(const logging::cfg::KeyValueTypeList& config) LOG_METHOD_OVERRIDE {
     (void)config;
     using namespace detail;
   }
@@ -41,7 +39,7 @@ public:
   /**
   * \brief    write method. Called every write to file operation
   */
-  virtual void write(int verb_level, const std::string& hdr, const std::string& what) {
+  virtual void write(int verb_level, const std::string& hdr, const std::string& what) LOG_METHOD_OVERRIDE {
     int default_color = get_console_text_color();
     int color = default_color;
 
@@ -63,10 +61,10 @@ public:
     set_console_text_color(default_color);
   }
 
-  void flush() {
+  void flush() LOG_METHOD_OVERRIDE {
   }
 
-  void close() {
+  void close() LOG_METHOD_OVERRIDE {
   }
 
 private:
@@ -87,6 +85,7 @@ private:
   }
 
   void set_console_text_color(int color) {
+    (void)color;
 #ifdef LOG_PLATFORM_WINDOWS
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, static_cast<WORD>(color));
@@ -105,16 +104,14 @@ protected:
   console_output_config config_;
 
 private:
-  bool log_flush_every_write_;
   std::string name_;
-  bool first_write_;
 };
 
 class logger_colored_console_output_plugin_factory : public logger_plugin_default_factory<logger_colored_console_output_plugin> {
 public:
   logger_colored_console_output_plugin_factory()
     : logger_plugin_default_factory<logger_colored_console_output_plugin>("console_output", kLogPluginTypeOutput) {}
-  virtual ~logger_colored_console_output_plugin_factory() {}
+  virtual ~logger_colored_console_output_plugin_factory() LOG_METHOD_OVERRIDE {}
 };
 
 }//namespace logging

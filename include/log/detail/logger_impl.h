@@ -385,12 +385,12 @@ private:
   }
 
  public:
-  int ref() { 
+  int ref() LOG_METHOD_OVERRIDE {
     long refs = mt::atomic_increment(&ref_counter_);
     return refs;
   }
 
-  int deref() {
+  int deref() LOG_METHOD_OVERRIDE {
     long refs = mt::atomic_decrement(&ref_counter_);
     if (refs <= 0) {
       // this is same as 'delete this'
@@ -400,9 +400,9 @@ private:
     return refs;
   }
 
-  int ref_counter() const { return ref_counter_; }
+  int ref_counter() const LOG_METHOD_OVERRIDE { return ref_counter_; }
 
-  void set_config_param(const char* key, const char* value) {
+  void set_config_param(const char* key, const char* value) LOG_METHOD_OVERRIDE {
     std::string val(value ? value : "");
     cfg::set_value(user_code_config_, key, process_config_macros_value(val));
 
@@ -411,7 +411,7 @@ private:
 
   // TODO: maybe need to add remove_config_param_override ?
 
-  int get_config_param(const char* key, char* buffer, int buffer_size) const {
+  int get_config_param(const char* key, char* buffer, int buffer_size) const LOG_METHOD_OVERRIDE {
     std::string val = cfg::get_value(config_, key);
     if (buffer && buffer_size) {
       *buffer = 0;
@@ -423,16 +423,16 @@ private:
     return 0;
   }
 
-  bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
+  bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) LOG_METHOD_OVERRIDE {
     return plugin_mgr_->register_plugin_factory(plugin_factory_interface);
   }
 
-  bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) {
+  bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) LOG_METHOD_OVERRIDE {
     return plugin_mgr_->unregister_plugin_factory(plugin_factory_interface);
   }
 
 
-  void flush() {
+  void flush() LOG_METHOD_OVERRIDE {
     mt::mutex_scope_lock lock(&mt_buffer_lock_);
 
 #if LOG_MULTITHREADED
@@ -455,7 +455,7 @@ private:
     }
   }
 
-  log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) {
+  log_stream stream(int verb_level, void* addr, const char* function_name, const char* source_file, int line_number) LOG_METHOD_OVERRIDE {
     return log_stream(this, verb_level, addr, function_name, source_file, line_number);
   }
 
@@ -750,12 +750,12 @@ private:
       plugins[i]->config_updated(config_);
   }
 
-  void reload_config() {
+  void reload_config() LOG_METHOD_OVERRIDE {
     reload_config_from_plugins();
     update_config();
   }
 
-  void dump_state(int verb_level) {
+  void dump_state(int verb_level) LOG_METHOD_OVERRIDE {
     put_to_stream(verb_level, std::string(), "*** Logger actual config ***");
 
     for (cfg::KeyValueTypeList::iterator it = config_.begin(); it != config_.end(); it++) {

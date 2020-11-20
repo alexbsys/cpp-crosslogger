@@ -33,7 +33,7 @@ namespace str {
       int result;
 #if LOG_USE_OWN_VSNPRINTF
       result = xvsnprintf(buffer, buffer_size - 1, format, arguments);
-#else LOG_USE_OWN_VSNPRINTF
+#else //LOG_USE_OWN_VSNPRINTF
 #  ifdef LOG_COMPILER_MSVC
       result = _vsnprintf_s(buffer, buffer_size, buffer_size - 1, format, arguments);
 #  else   // LOG_COMPILER_MSVC

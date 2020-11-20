@@ -30,7 +30,7 @@ namespace logging {
     logger_verbose_warning | logger_verbose_info,
     logger_verbose_mute = 0,
 
-#if defined(_DEBUG) || LOG_PLATFORM_ANDROID
+#if defined(_DEBUG) || defined(LOG_PLATFORM_ANDROID)
     logger_verbose_optimal = logger_verbose_normal | logger_verbose_debug
 #else   //_DEBUG
     logger_verbose_optimal = logger_verbose_normal

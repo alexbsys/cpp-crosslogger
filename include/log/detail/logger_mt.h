@@ -18,6 +18,10 @@
 #include <pthread.h>
 #endif /*LOG_HAVE_PTHREAD*/
 
+#ifdef LOG_PLATFORM_ANDROID
+#include <sched.h>
+#endif /*LOG_PLATFORM_ANDROID*/
+
 ////////// Portable atomic implementation
 
 #define LOG_ATOMIC_IMPL_GCC 1
@@ -217,6 +221,8 @@ static void fire_event(LOG_MT_EVENT_TYPE* evt) {
 static void yield() {
 #if defined(LOG_PLATFORM_WINDOWS)
   Sleep(0);
+#elif defined(LOG_PLATFORM_ANDROID)
+  sched_yield();
 #elif defined(LOG_HAVE_PTHREAD)
   pthread_yield();
 #elif defined(LOG_CPP_X11)
@@ -227,7 +233,7 @@ static void yield() {
 }
 
 static LOG_MT_THREAD_HANDLE_TYPE thread_start(LOG_MT_THREAD_FN_TYPE thread_fn, void* thread_param) {
-  LOG_MT_THREAD_HANDLE_TYPE thread_handle = NULL;
+  LOG_MT_THREAD_HANDLE_TYPE thread_handle = LOG_MT_THREAD_HANDLE_TYPE();
 
 #ifdef LOG_PLATFORM_WINDOWS
   DWORD thread_id;

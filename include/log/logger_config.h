@@ -3,6 +3,8 @@
 #ifndef LOGGER_CONFIG_HEADER
 #define LOGGER_CONFIG_HEADER
 
+#include <log/logger_pdetect.h>
+
 //////////////////////////////////////////////////////////////
 //////////////  CONFIGURATION SECTION BEGIN  /////////////////
 
