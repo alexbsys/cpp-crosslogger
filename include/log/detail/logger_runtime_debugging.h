@@ -355,7 +355,7 @@ public:
 
       if (frame.module_name.size()) {
 #ifdef _AMD64_
-        sstream << stringformat("[Mod:  %s, base: %.8X%.8X] ", frame.module_name.c_str(),
+        sstream << str::stringformat("[Mod:  %s, base: %.8X%.8X] ", frame.module_name.c_str(),
           (uint32_t)(frame.module_base >> 32),
           (uint32_t)frame.module_base);
 #else   //_AMD64_
