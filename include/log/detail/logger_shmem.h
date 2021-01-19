@@ -151,7 +151,9 @@ struct shared_obj {
 #else   // LOG_PLATFORM_WINDOWS
       int page_bits;
 
+#if !defined(LOG_PLATFORM_ANDROID)
       if (get_page_bits((void*)page, &page_bits)) continue;
+#endif
 
       result_ptr =
         mmap((void*)page, shared_page_mem_size, PROT_READ | PROT_WRITE | PROT_EXEC,

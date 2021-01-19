@@ -99,7 +99,7 @@
 #if defined(_AMD64_) || defined(__amd64__) \
     || defined(__amd64) || defined(__x86_64) || defined(_M_AMD64) || defined(__x86_64__)
 
-#pragma message "Detected Intel AMD64"
+//#pragma message ("Detected Intel AMD64")
 #  define LOG_PLATFORM_64BIT
 #  define LOG_CPU_INTEL
 #  define LOG_CPUARCH_IA32
@@ -167,7 +167,7 @@
 #if (defined (_M_ARM) || defined(__ARM_ARCH) || defined(__thumb__) || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) \
     || defined(_ARM) || defined(_M_ARMT) || defined(__arm)) \
     && !defined(LOG_CPU_DETECTED)
-#pragma message "Detected ARM"
+//#pragma message "Detected ARM"
 
 #  define LOG_CPU_ARM
 

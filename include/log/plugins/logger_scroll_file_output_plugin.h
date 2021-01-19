@@ -57,7 +57,9 @@ public:
     }
 
     if (prev_full_log_file_path != config_.full_log_file_path_) {
+#if !LOG_ANDROID_SYSLOG
       scroll_files(config_.scroll_file_every_run_);
+#endif
     }
   }
 
@@ -77,7 +79,6 @@ public:
     __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
 #else  // LOG_ANDROID_SYSLOG
     stream_ << str;
-#endif  // LOG_ANDROID_SYSLOG
 
     if (!stream_.is_open())
       stream_.open(config_.full_log_file_path_.c_str(), std::ios::app);
@@ -95,16 +96,22 @@ public:
       stream_.flush();
       stream_.close();
     }
+#endif  // LOG_ANDROID_SYSLOG
+
   }
 
   void flush() LOG_METHOD_OVERRIDE {
+#if !LOG_ANDROID_SYSLOG
     if (!config_.flush_every_write_ && stream_.is_open())
       stream_.flush();
+#endif
   }
 
   void close() LOG_METHOD_OVERRIDE {
+#if !LOG_ANDROID_SYSLOG
     if (stream_.is_open())
       stream_.close();
+#endif
   }
 
   virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
@@ -139,6 +146,8 @@ protected:
   }
 
   /**  Scroll log files if needed */
+#if !LOG_ANDROID_SYSLOG
+
   void scroll_files(bool force = false) {
     using namespace detail;
 
@@ -239,6 +248,7 @@ protected:
       }
     }
   }
+#endif
 
   struct file_output_config {
     std::string log_path_;
@@ -262,7 +272,10 @@ protected:
   file_output_config config_;
 
 private:
+#if !LOG_ANDROID_SYSLOG
   std::ofstream stream_;
+#endif
+
   int cur_file_size_;
   std::string name_;
 };

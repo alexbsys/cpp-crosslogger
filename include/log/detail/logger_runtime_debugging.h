@@ -595,7 +595,7 @@ public:
     return result;
   }
 
-  void get_current_stack_trace_string(std::string* stack_trace, int ignore_functions) {
+  static void get_current_stack_trace_string(std::string* stack_trace, int ignore_functions) {
     const int kStackTraceMaxDepth = 1024;
 
     void* bt[kStackTraceMaxDepth];

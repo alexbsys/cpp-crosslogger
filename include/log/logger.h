@@ -77,6 +77,10 @@
 #  include "logger_get_caller_addr.h"
 #  include "logger_verbose.h"
 
+#if defined(LOG_CPP)
+#  include <typeinfo>
+#endif /*LOG_CPP*/
+
 #if defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
 /// logger implementation
 #include "logger_interfaces.h"
@@ -84,6 +88,8 @@
 
 #include "logger_cfg.h"
 #include "logger_singleton.h"
+
+#include <log/detail/logger_utils.h>
 #include <log/detail/logger_impl.h>
 
 namespace logging {

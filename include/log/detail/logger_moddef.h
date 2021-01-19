@@ -338,7 +338,7 @@ public:
 
     if (!info || size < sizeof(struct dl_phdr_info)) return 0;
 
-    if (!strlen(info->dlpi_name)) return 0;
+    if (!info->dlpi_name || !strlen(info->dlpi_name)) return 0;
 
     module_entry_t e;
     e.base_address = info->dlpi_addr;

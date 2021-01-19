@@ -351,16 +351,16 @@
 
 
 
-#define LOG_SET_CURRENT_THREAD_NAME(name) logging::utils::set_current_thread_name(name)
+#define LOG_SET_CURRENT_THREAD_NAME(name) logging::detail::utils::set_current_thread_name(name)
 
-#if LOG_USE_OBJMON
+/*#if LOG_USE_OBJMON*/
 #  define LOG_OBJMON_REGISTER_INSTANCE() { \
-  struct { unsigned int hash; const char* type_name; void* ptr; } param = { typeid(*this).hash_code(), typeid(*this).name(), this }; \
+  struct { unsigned int hash; const char* type_name; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
   LOG_CMD(0x1010, logging::logger_verbose_info, &param, 0); \
 }
 
 #  define LOG_OBJMON_UNREGISTER_INSTANCE() { \
-  struct { unsigned int hash; void* ptr; } param = { typeid(*this).hash_code(), this }; \
+  struct { unsigned int hash; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), this }; \
   LOG_CMD(0x1011, logging::logger_verbose_info, &param, 0); \
 }
 
@@ -375,6 +375,7 @@
 #  define LOG_OBJMON_DUMP_ERROR() \
     logging::_logger->log_objmon_dump(logging::logger_verbose_error)
     */
+/*
 #else  // LOG_USER_OBJMON
 #  define LOG_OBJMON_REGISTER_INSTANCE()
 #  define LOG_OBJMON_UNREGISTER_INSTANCE()
@@ -383,7 +384,7 @@
 #  define LOG_OBJMON_DUMP_WARNING()
 #  define LOG_OBJMON_DUMP_ERROR()
 #endif  // LOG_USE_OBJMON
-
+*/
 
 // Logger instance definition macro
 #if LOG_SHARED
@@ -414,9 +415,9 @@
 #define LOG_SET_CURRENT_THREAD_NAME(name) __c_logger_set_current_thread_name(LOGOBJ_GET_DEFAULT_LOGGER(), name)
 
 
-#if LOG_USE_OBJMON
+/*#if LOG_USE_OBJMON*/
 #define LOG_OBJMON_REGISTER_INSTANCE() { \
-   struct { unsigned int hash; const char* type_name; void* ptr; } param = { typeid(*this).hash_code(), typeid(*this).name(), this }; \
+   struct { unsigned int hash; const char* type_name; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
    LOG_CMD(0x1010, LOGGER_VERBOSE_INFO, &param, 0); \
 }
 
@@ -424,7 +425,7 @@
 
 
 #define LOG_OBJMON_UNREGISTER_INSTANCE() { \
-  struct { unsigned int hash; void* ptr; } param = { typeid(*this).hash_code(), this }; \
+  struct { unsigned int hash; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), this }; \
   LOG_CMD(0x1011, LOGGER_VERBOSE_INFO, &param, 0); \
 }
 
@@ -434,7 +435,7 @@
 #define LOG_OBJMON_DUMP_WARNING() LOG_CMD(0x1012, LOGGER_VERBOSE_WARNING, NULL, 0)
 #define LOG_OBJMON_DUMP_ERROR() LOG_CMD(0x1012, LOGGER_VERBOSE_ERROR, NULL, 0)
 #define LOG_OBJMON_DUMP_FATAL() LOG_CMD(0x1012, LOGGER_VERBOSE_FATAL, NULL, 0)
-#endif  // LOG_USE_OBJMON
+/*#endif  // LOG_USE_OBJMON*/
 
 
 #endif /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
