@@ -84,13 +84,18 @@
 #define LOG_SET_CONFIG_PARAM(name,value)
 #define LOG_GET_CONFIG_PARAM(name, buf, size)
 #define LOG_FLUSH()
+#define LOG_SHUTDOWN()
 
+#define LOG_TEXT(v,...)
+#define LOG_CMD(...)
+#define LOG_GET_LOGGER()
+#define LOG_STREAM(v)
 
 #else  /*LOG_ENABLED*/
 
 #if LOG_USE_MODULEDEFINITION
 #define LOG_GET_CALLER_ADDR logging_get_caller_address()
-#else
+#else //LOG_USE_MODULEDEFINITION
 #define LOG_GET_CALLER_ADDR 0L
 #endif  // LOG_USE_MODULEDEFINITION
 
@@ -145,7 +150,10 @@
   LOGOBJ_GET_DEFAULT_LOGGER()->stream((v), LOG_GET_CALLER_ADDR, \
       __FUNCTION__, __FILE__, __LINE__)
 
-#else
+#define LOG_GET_LOGGER() \
+  LOGOBJ_GET_DEFAULT_LOGGER()
+
+#else //defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))
 // Logger outproc implementation
 
 #define LOGOBJ_CMD(logobj,cmdid,v,p,l) \
@@ -155,7 +163,6 @@
 #define LOGOBJ_TEXT(logobj, v, ...) \
   __c_logger_log((logobj), (v), LOG_GET_CALLER_ADDR, __FUNCTION__, \
     __FILE__, __LINE__, __VA_ARGS__)
-
 
 #define LOGOBJ_RELOAD_CONFIG(logobj) \
   __c_logger_reload_config((logobj))
