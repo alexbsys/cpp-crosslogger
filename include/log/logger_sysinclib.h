@@ -28,14 +28,16 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
-#include <time.h>
+#include <ctime>
+#include <cinttypes>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
 #include <sys/types.h>
 #ifndef LOG_PLATFORM_ANDROID
 #include <sys/timeb.h>
 #endif /*LOG_PLATFORM_ANDROID*/
 #include <list>
-#include <string.h>
-#include <stdlib.h>
 
 #if LOG_RTTI_ENABLED
 #include <typeinfo>
@@ -54,6 +56,7 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
+
 #else  // LOGGER_PLATFORM_WINDOWS
 
 #ifdef LOG_HAVE_UNISTD_H
@@ -76,6 +79,7 @@
 
 #ifdef LOG_PLATFORM_MAC
 #  include <mach-o/dyld.h>
+#  include <mach-o/dyld_images.h>
 #endif // defined(LOG_PLATFORM_MAC)
 
 #if LOG_USE_SYSTEMINFO
@@ -113,8 +117,11 @@
 #include <android/log.h>
 #endif  // LOG_ANDROID_SYSLOG
 
-#if !defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_MAC) && LOG_USE_MODULEDEFINITION
+#if !defined(LOG_PLATFORM_WINDOWS) && LOG_USE_MODULEDEFINITION
 #include <dlfcn.h>
+#endif /* !defined(LOG_PLATFORM_WINDOWS) && LOG_USE_MODULEDEFINITION */
+
+#if !defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_MAC) && LOG_USE_MODULEDEFINITION
 #include <link.h>
 #endif  //! defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_MAC) && LOG_USE_MODULEDEFINITION
 
@@ -137,6 +144,11 @@
 #endif /*LOG_USE_SYSUNWIND*/
 
 #if !defined(LOG_PLATFORM_WINDOWS) && LOG_UNHANDLED_EXCEPTIONS
+
+#if defined(LOG_PLATFORM_MAC)
+#define _XOPEN_SOURCE 1
+#endif /*LOG_PLATFORM_MAC*/
+
 #include <signal.h>
 #include <ucontext.h>
 #endif  //! defined(LOG_PLATFORM_WINDOWS) && LOG_UNHANDLED_EXCEPTIONS

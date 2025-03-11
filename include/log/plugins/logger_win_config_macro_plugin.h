@@ -56,7 +56,9 @@ protected:
 #ifdef LOG_HAVE_UNISTD_H
       if (getcwd(current_dir, 512)) current_dir[0] = 0;
 #else   // LOG_HAVE_UNISTD_H
-      strcpy(current_dir, "./");
+      current_dir[0] = '.';
+      current_dir[1] = '/';
+      current_dir[2] = 0;
 #endif  // LOG_HAVE_UNISTD_H
 
 #endif  // LOG_PLATFORM_WINDOWS
@@ -123,8 +125,23 @@ protected:
       ++replaced;
     }
 
+    if (str::contains(str.c_str(), "$(MODULEDIR")) {
+      str = str::replace(str, "$(MODULEDIR)", utils::get_module_file_path());
+      ++replaced;
+    }
+
     if (str::contains(str.c_str(), "$(EXEFILENAME)")) {
       str = str::replace(str, "$(EXEFILENAME)", utils::get_process_file_name());
+      ++replaced;
+    }
+
+    if (str::contains(str.c_str(), "$(MODULEFILENAME)")) {
+      str = str::replace(str, "$(MODULEFILENAME)", utils::get_module_file_name());
+      ++replaced;
+    }
+
+    if (str::contains(str.c_str(), "$(MODULEFULLFILENAME)")) {
+      str = str::replace(str, "$(MODULEFULLFILENAME)", utils::get_module_full_file_name());
       ++replaced;
     }
 

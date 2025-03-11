@@ -14,6 +14,8 @@
 extern "C" {
 #endif /*LOG_CPP*/
 
+#if LOG_ENABLED
+
 #if LOG_USE_DLL && !LOG_THIS_IS_DLL
 extern void(LOG_CDECL* __c_logger_log)(void* logobj, int verbose_level, void* caller_addr,
                                        const char* function, const char* file, int line,
@@ -43,6 +45,7 @@ extern int(LOG_CDECL* __c_logger_unregister_plugin_factory)(void* logobj, void* 
 extern int(LOG_CDECL* __c_logger_attach_plugin)(void* logobj, void* plugin_interface);
 extern int(LOG_CDECL* __c_logger_detach_plugin)(void* logobj, void* plugin_interface);
 extern void(LOG_CDECL* __c_logger_flush)(void* logobj);
+extern void(LOG_CDECL* __c_logger_shutdown)();
 
 extern unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj);
 
@@ -74,6 +77,7 @@ int __c_logger_unregister_plugin_factory(void* logobj, void* factory_interface);
 int __c_logger_attach_plugin(void* logobj, void* plugin_interface);
 int __c_logger_detach_plugin(void* logobj, void* plugin_interface);
 void __c_logger_flush(void* logobj);
+void __c_logger_shutdown();
 
 unsigned int c_logger_get_version(void* logobj);
 int c_logger_is_master(void* logobj);
@@ -81,6 +85,8 @@ int c_logger_is_master(void* logobj);
 void* __c_logger_get_logger();
 
 #endif  /*LOG_USE_DLL && !LOG_THIS_IS_DLL*/
+
+#endif /*LOG_ENABLED*/
 
 #ifdef LOG_CPP
 }; /*extern "C"*/

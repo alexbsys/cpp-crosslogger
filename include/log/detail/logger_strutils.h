@@ -22,6 +22,8 @@ namespace str {
     static const int kStartBufferSize = 512;
     static const int kBufferSizeIncrementBytes = 512;
 
+    va_list arguments_copy;
+
     // static buffer is faster than heap allocated
     char static_buf[kStartBufferSize];
     int buffer_size = kStartBufferSize;
@@ -31,20 +33,25 @@ namespace str {
 
     do {
       int result;
+
+      va_copy(arguments_copy, arguments);
+
 #if LOG_USE_OWN_VSNPRINTF
-      result = xvsnprintf(buffer, buffer_size - 1, format, arguments);
+      result = xvsnprintf(buffer, buffer_size - 1, format, arguments_copy);
 #else //LOG_USE_OWN_VSNPRINTF
 #  ifdef LOG_COMPILER_MSVC
-      result = _vsnprintf_s(buffer, buffer_size, buffer_size - 1, format, arguments);
+      result = _vsnprintf_s(buffer, buffer_size, buffer_size - 1, format, arguments_copy);
 #  else   // LOG_COMPILER_MSVC
-      result = vsnprintf(buffer, buffer_size - 1, format, arguments);
+      result = vsnprintf(buffer, buffer_size - 1, format, arguments_copy);
 #  endif  // LOG_COMPILER_MSVC
 #endif // LOG_USE_OWN_VSNPRINTF
+
+      va_end(arguments_copy);
 
       if (result >= 0 && result < buffer_size) break;
 
       if (result >= buffer_size) {
-        buffer_size = result + 1;
+        buffer_size = result + 16;
       } else {
         buffer_size += kBufferSizeIncrementBytes;
       }
@@ -58,7 +65,7 @@ namespace str {
       if (!buffer) break;
     } while (true);
 
-    result_str = buffer ? buffer : std::string();
+    result_str = buffer ? std::string(buffer) : std::string();
     if (need_delete) free(buffer);
   }
 
@@ -119,6 +126,19 @@ namespace str {
     }
   }
 
+  static std::string tolower(const std::string& str) {
+    std::string result = str;
+    for (size_t i = 0; i < result.size(); i++) result[i] = ::tolower(result[i]);
+    return result;
+  }
+  
+  static std::string trimr(std::string str, char delim = ' ') {
+    return str.erase(str.find_last_not_of(delim) + 1);
+  }
+
+  static std::string triml(std::string str, char delim = ' ') {
+    return str.erase(0, str.find_first_not_of(delim));
+  }
 }//namespace str
 }//namespace detail
 }//namespace logging

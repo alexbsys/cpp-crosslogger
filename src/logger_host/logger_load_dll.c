@@ -37,6 +37,9 @@ int average( va_list );
 
 #if LOG_USE_DLL && !LOG_THIS_IS_DLL
 
+#if LOG_ENABLED
+
+
 #ifdef LOG_PLATFORM_MAC
 #  include <mach-o/dyld.h>
 #endif //LOG_PLATFORM_MAC
@@ -135,6 +138,11 @@ void LOG_CDECL __c_logger_flush_dummy(void* logobj) {
     __c_logger_flush(logobj);
 }
 
+void LOG_CDECL __c_logger_shutdown_dummy() {
+  if (__c_logger_shutdown != __c_logger_shutdown_dummy)
+    __c_logger_shutdown();
+}
+
 unsigned int LOG_CDECL c_logger_get_version_dummy(void* logobj) {
   if (logger_load_dll() && c_logger_get_version != c_logger_get_version_dummy)
     return c_logger_get_version(logobj);
@@ -164,16 +172,17 @@ void (LOG_CDECL *__c_logger_log_cmd_args)(void* logobj, int cmd_id, int verbose_
 void (LOG_CDECL *__c_logger_set_current_thread_name)(void* logobj, const char* thread_name) = &__c_logger_set_current_thread_name_dummy;
 void (LOG_CDECL *__c_logger_set_config_param)(void* logobj, const char* key, const char* value) = &__c_logger_set_config_param_dummy;
 int (LOG_CDECL *__c_logger_get_config_param)(void* logobj, const char* key, char* value, int buffer_size) = &__c_logger_get_config_param_dummy;
-void(LOG_CDECL* __c_logger_reload_config)(void* logobj);
-void(LOG_CDECL* __c_logger_dump_state)(void* logobj, int verbose_level);
-int(LOG_CDECL* __c_logger_register_plugin_factory)(void* logobj, void* factory_interface);
-int(LOG_CDECL* __c_logger_unregister_plugin_factory)(void* logobj, void* factory_interface);
-int(LOG_CDECL* __c_logger_attach_plugin)(void* logobj, void* plugin_interface);
-int(LOG_CDECL* __c_logger_detach_plugin)(void* logobj, void* plugin_interface);
-void(LOG_CDECL* __c_logger_flush)(void* logobj);
-unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj);
-int(LOG_CDECL* c_logger_is_master)(void* logobj);
-void* (LOG_CDECL* __c_logger_get_logger)();
+void(LOG_CDECL* __c_logger_reload_config)(void* logobj) = &__c_logger_reload_config_dummy;
+void(LOG_CDECL* __c_logger_dump_state)(void* logobj, int verbose_level) = &__c_logger_dump_state_dummy;
+int(LOG_CDECL* __c_logger_register_plugin_factory)(void* logobj, void* factory_interface) = &__c_logger_register_plugin_factory_dummy;
+int(LOG_CDECL* __c_logger_unregister_plugin_factory)(void* logobj, void* factory_interface) = &__c_logger_unregister_plugin_factory_dummy;
+int(LOG_CDECL* __c_logger_attach_plugin)(void* logobj, void* plugin_interface) = &__c_logger_attach_plugin_dummy;
+int(LOG_CDECL* __c_logger_detach_plugin)(void* logobj, void* plugin_interface) = &__c_logger_detach_plugin_dummy;
+void(LOG_CDECL* __c_logger_flush)(void* logobj) = &__c_logger_flush_dummy;
+void(LOG_CDECL* __c_logger_shutdown)() = &__c_logger_shutdown_dummy;
+unsigned int(LOG_CDECL* c_logger_get_version)(void* logobj) = &c_logger_get_version_dummy;
+int(LOG_CDECL* c_logger_is_master)(void* logobj) = &c_logger_is_master_dummy;
+void* (LOG_CDECL* __c_logger_get_logger)() = &__c_logger_get_logger_dummy;
 
 void logger_restore_dummies()
 {
@@ -217,6 +226,9 @@ void logger_restore_dummies()
 
 # ifndef LOG_DLL_NAME
 #  if defined(LOG_PLATFORM_ANDROID)
+#	   define LOG_DLL_NAME_ARM64 		"liblogger_dll_arm64-v8a.so"
+#	   define LOG_DLL_NAME_ARMV7 		"liblogger_dll_armeabi-v7a.so"
+
 #    if defined(LOG_PLATFORM_64BIT)
 #	   define LOG_DLL_NAME 		"liblogger_dll_arm64-v8a.so"
 #    elif defined(LOG_PLATFORM_32BIT)
@@ -232,6 +244,7 @@ void logger_restore_dummies()
 # endif //LOG_DLL_NAME
 
 #endif //LOG_PLATFORM_WINDOWS
+
 
 
 int LOG_CDECL logger_is_dll_loaded() {
@@ -281,6 +294,9 @@ int LOG_CDECL logger_load_dll_functions(void* logger_dll_handle) {
   __c_logger_flush = (void(LOG_CDECL*)(void* logobj))
     LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_flush");
 
+  __c_logger_shutdown = (void(LOG_CDECL*)())
+    LOG_GET_PROC_ADDRESS(logger_dll_handle, "__c_logger_shutdown");
+
   c_logger_get_version = (unsigned int(LOG_CDECL*)(void* logobj))
     LOG_GET_PROC_ADDRESS(logger_dll_handle, "c_logger_get_version");
 
@@ -297,6 +313,8 @@ int LOG_CDECL logger_load_dll() {
 #if !defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_ANDROID)
     char libpath[512];
     int pos;
+
+    memset(libpath, 0, sizeof(libpath));
 #endif /*!defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_ANDROID)*/
 
 	if (__logger_dll_handle)
@@ -314,6 +332,11 @@ int LOG_CDECL logger_load_dll() {
 
 #ifdef LOG_PLATFORM_ANDROID
   __logger_dll_handle = dlopen(LOG_DLL_NAME, RTLD_LAZY);
+  if (!__logger_dll_handle)
+      __logger_dll_handle = dlopen(LOG_DLL_NAME_ARMV7, RTLD_LAZY);
+
+  if (!__logger_dll_handle)
+      __logger_dll_handle = dlopen(LOG_DLL_NAME_ARM64, RTLD_LAZY);
 #else //LOG_PLATFORM_ANDROID
 
 #	ifdef LOG_HAVE_UNISTD_H
@@ -334,7 +357,9 @@ int LOG_CDECL logger_load_dll() {
 	    pos--;
 	}
 #	else //LOG_HAVE_UNISTD_H
-	strcpy(libpath,"./");
+        libpath[0] = '.';
+        libpath[1] = '/';
+        libpath[2] = 0;
 #	endif //LOG_HAVE_UNISTD_H
 
 	strcat(libpath, LOG_DLL_NAME);
@@ -390,6 +415,9 @@ int LOG_CDECL logger_load_dll() {
   if (!__c_logger_flush)
     __c_logger_flush = &__c_logger_flush_dummy;
 
+  if (!__c_logger_shutdown)
+    __c_logger_shutdown = &__c_logger_shutdown_dummy;
+
   if (!c_logger_get_version)
     c_logger_get_version = &c_logger_get_version_dummy;
 
@@ -406,5 +434,8 @@ int LOG_CDECL logger_load_dll() {
 
   return 1;
 }
+
+
+#endif //LOG_ENABLED
 
 #endif //LOG_USE_DLL && !LOG_THIS_IS_DLL

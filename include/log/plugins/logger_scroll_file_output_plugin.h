@@ -11,6 +11,7 @@
 
 #include <log/detail/logger_utils.h>
 #include <log/detail/logger_cfgfn.h>
+#include <log/detail/logger_xprintf.h>
 
 #include <fstream>
 
@@ -23,8 +24,9 @@ public:
   virtual ~logger_scroll_file_output_plugin() {}
 
   logger_scroll_file_output_plugin(const char* output_name = NULL)
-    : cur_file_size_(0)
-    , name_(output_name == NULL ? std::string() : output_name) {
+    : current_file_size_(0)
+    , name_(output_name == NULL ? std::string() : output_name)
+    , logger_(nullptr) {
   }
 
   const char* type() const LOG_METHOD_OVERRIDE {
@@ -35,7 +37,14 @@ public:
     return name_.c_str();
   }
 
+  bool attach(logger_interface* logger) LOG_METHOD_OVERRIDE {
+    logger_ = logger;
+    return true;
+  }
+
   void config_updated(const logging::cfg::KeyValueTypeList& config) LOG_METHOD_OVERRIDE {
+    const char* kDefaultLogFileName = "$(EXEFILENAME).log";
+
     using namespace detail;
 
     std::string prev_full_log_file_path = config_.full_log_file_path_;
@@ -44,7 +53,12 @@ public:
     config_.scroll_file_size_ = detail::cfg::get_logcfg_int(config, type(), name(), "ScrollFileSize", 0);
     config_.log_path_ = detail::cfg::get_logcfg_string(config, type(), name(), "LogPath", ".");
     config_.verbose_level_ = detail::cfg::get_logcfg_int(config, type(), name(), "Verbose", logger_verbose_all);
-    config_.log_file_name_ = detail::cfg::get_logcfg_string(config, type(), name(), "LogFileName", "$(EXEFILENAME)");
+
+    std::string default_name(kDefaultLogFileName);
+    if (logger_)
+      default_name = logger_->process_config_macros_value(default_name);
+
+    config_.log_file_name_ = detail::cfg::get_logcfg_string(config, type(), name(), "LogFileName", default_name);
     config_.scroll_file_count_ = detail::cfg::get_logcfg_int(config, type(), name(), "ScrollFileCount", 0);
     config_.scroll_file_every_run_ = detail::cfg::get_logcfg_int(config, type(), name(), "ScrollFileEveryRun", 0) ? true : false;
     config_.create_log_directory_ = detail::cfg::get_logcfg_int(config, type(), name(), "CreateLogDirectory", 1) ? true : false;
@@ -57,9 +71,9 @@ public:
     }
 
     if (prev_full_log_file_path != config_.full_log_file_path_) {
-#if !LOG_ANDROID_SYSLOG
+//#if !LOG_ANDROID_SYSLOG
       scroll_files(config_.scroll_file_every_run_);
-#endif
+//#endif
     }
   }
 
@@ -77,47 +91,51 @@ public:
 
 #if LOG_ANDROID_SYSLOG
     __android_log_write(ANDROID_LOG_INFO, "LOGGER", str.c_str());
-#else  // LOG_ANDROID_SYSLOG
-    stream_ << str;
+#endif  // LOG_ANDROID_SYSLOG
 
-    if (!stream_.is_open())
+    if (!stream_.is_open()) {
       stream_.open(config_.full_log_file_path_.c_str(), std::ios::app);
+    }
 
-    if (!stream_.is_open())
+    if (!stream_.is_open()) {
       return;
+    }
 
     if (is_need_scroll_files()) {
       scroll_files();
     }
 
-    cur_file_size_ += static_cast<int>(str.size());
+    stream_ << str;
+    current_file_size_ += static_cast<int>(str.size());
 
     if (config_.flush_every_write_) {
       stream_.flush();
       stream_.close();
     }
-#endif  // LOG_ANDROID_SYSLOG
 
   }
 
-  void flush() LOG_METHOD_OVERRIDE {
-#if !LOG_ANDROID_SYSLOG
+  void flush(bool wait_ack) LOG_METHOD_OVERRIDE {
+    (void) wait_ack;
+//#if !LOG_ANDROID_SYSLOG
     if (!config_.flush_every_write_ && stream_.is_open())
       stream_.flush();
-#endif
+
+//#endif
   }
 
   void close() LOG_METHOD_OVERRIDE {
-#if !LOG_ANDROID_SYSLOG
+//#if !LOG_ANDROID_SYSLOG
     if (stream_.is_open())
       stream_.close();
-#endif
+//#endif
   }
 
   virtual void detach(logger_interface* logger) LOG_METHOD_OVERRIDE {
     (void)logger;
-    flush();
+    flush(true);
     close();
+    logger_ = nullptr;
   }
 
 protected:
@@ -139,14 +157,15 @@ protected:
     return atoi(idx.c_str());
   }
 
+  /** Check that files need to be scrolled now */
   bool is_need_scroll_files() const {
     if (!config_.scroll_file_size_) return false;
-    int file_size = cur_file_size_;
+    int file_size = current_file_size_;
     return file_size > static_cast<int>(config_.scroll_file_size_);
   }
 
   /**  Scroll log files if needed */
-#if !LOG_ANDROID_SYSLOG
+//#if !LOG_ANDROID_SYSLOG
 
   void scroll_files(bool force = false) {
     using namespace detail;
@@ -161,7 +180,7 @@ protected:
       std::map<int, std::string> log_files;
       int max_index = 0;
 
-      cur_file_size_ = 0;
+      current_file_size_ = 0;
 
 #ifdef LOG_PLATFORM_WINDOWS
       WIN32_FIND_DATAA find_data;
@@ -230,11 +249,10 @@ protected:
           continue;
         }
 
-        char new_index_buffer[32];
-        sprintf(new_index_buffer, "%d", new_index);
+        std::string new_index_buffer = detail::str::stringformat("%d", new_index);
 
         std::string new_name =
-          name.substr(0, name.find_last_of('.')) + std::string(".") + std::string(new_index_buffer);
+          name.substr(0, name.find_last_of('.')) + std::string(".") + new_index_buffer;
 
         utils::move_file((config_.log_path_ + utils::get_path_separator() + name),
           (config_.log_path_ + utils::get_path_separator() + new_name));
@@ -248,9 +266,9 @@ protected:
       }
     }
   }
-#endif
+//#endif
 
-  struct file_output_config {
+  struct file_output_config_type {
     std::string log_path_;
     std::string log_file_name_;
     std::string full_log_file_path_;
@@ -261,7 +279,7 @@ protected:
     bool create_log_directory_;
     int verbose_level_;
 
-    file_output_config() :
+    file_output_config_type() :
       flush_every_write_(false), scroll_file_size_(0),
       scroll_file_count_(0), scroll_file_every_run_(false), 
       create_log_directory_(true), 
@@ -269,15 +287,16 @@ protected:
     {}
   };
 
-  file_output_config config_;
+  file_output_config_type config_;
 
 private:
-#if !LOG_ANDROID_SYSLOG
+//#if !LOG_ANDROID_SYSLOG
   std::ofstream stream_;
-#endif
+//#endif
 
-  int cur_file_size_;
+  int current_file_size_;
   std::string name_;
+  logger_interface* logger_;
 };
 
 

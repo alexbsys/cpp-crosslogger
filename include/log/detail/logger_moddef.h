@@ -6,6 +6,8 @@
 #include <log/logger_pdetect.h>
 #include <log/logger_sysinclib.h>
 
+#include <log/detail/logger_xprintf.h>
+
 ////////////////////  Module Definition components  ////////////////////
 
 namespace logging {
@@ -240,10 +242,10 @@ public:
     if (!module) return std::string();
 
     char file_name[MAX_PATH];
-    GetModuleFileNameA(module, file_name, sizeof(file_name));
+    GetModuleFileNameA(module, file_name, sizeof(file_name)-1);
     return file_name;
   }
-#else   // LOG_PLATFORM_WINDOWS
+#elif defined(LOG_PLATFORM_MAC)  // LOG_PLATFORM_WINDOWS
   static std::string module_name_by_addr(void* function_address) {
     Dl_info info;
     if (dladdr(function_address, &info)) {
@@ -251,6 +253,17 @@ public:
     }
     return std::string();
   }
+
+#else
+  static std::string module_name_by_addr(void* function_address) {
+    Dl_info info;
+    if (dladdr(function_address, &info)) {
+      return info.dli_fname;
+    }
+    return std::string();
+  }
+
+
 #endif  // LOG_PLATFORM_WINDOWS
 
 #ifdef LOG_PLATFORM_WINDOWS
@@ -286,42 +299,41 @@ public:
 
     LPVOID retbuf = NULL;
 
-    static char file_entry[256];
+    std::string file_entry = "\\VarFileInfo\\Translation";
+    ret_val = VerQueryValueA(data, file_entry.c_str(), &retbuf, (UINT*)&v_len);
 
-    sprintf(file_entry, "\\VarFileInfo\\Translation");
-    ret_val = VerQueryValueA(data, file_entry, &retbuf, (UINT*)&v_len);
     if (ret_val && v_len == 4) {
-      static char current_entry[256];
+      std::string current_entry;
 
       memcpy(&lang_d, retbuf, 4);
 
       lang_id = lang_d;
 
-      sprintf(file_entry, "\\StringFileInfo\\%02X%02X%02X%02X\\", (lang_d & 0xff00) >> 8,
+      file_entry = detail::str::stringformat("\\StringFileInfo\\%02X%02X%02X%02X\\", (lang_d & 0xff00) >> 8,
         lang_d & 0xff, (lang_d & 0xff000000) >> 24, (lang_d & 0xff0000) >> 16);
 
-      strcpy(current_entry, file_entry);
-      strcat(current_entry, "FileVersion");
+      current_entry = file_entry;
+      current_entry += "FileVersion";
 
-      if (VerQueryValueA(data, current_entry, &retbuf, (UINT*)&v_len))
+      if (VerQueryValueA(data, current_entry.c_str(), &retbuf, (UINT*)&v_len))
         file_version = (char*)retbuf;
 
-      strcpy(current_entry, file_entry);
-      strcat(current_entry, "FileDescription");
+      current_entry = file_entry;
+      current_entry += "FileDescription";
 
-      if (VerQueryValueA(data, current_entry, &retbuf, (UINT*)&v_len))
+      if (VerQueryValueA(data, current_entry.c_str(), &retbuf, (UINT*)&v_len))
         file_description = (char*)retbuf;
 
-      strcpy(current_entry, file_entry);
-      strcat(current_entry, "ProductVersion");
+      current_entry = file_entry;
+      current_entry += "ProductVersion";
 
-      if (VerQueryValueA(data, current_entry, &retbuf, (UINT*)&v_len))
+      if (VerQueryValueA(data, current_entry.c_str(), &retbuf, (UINT*)&v_len))
         product_version = (char*)retbuf;
 
-      strcpy(current_entry, file_entry);
-      strcat(current_entry, "CompanyName");
+      current_entry = file_entry;
+      current_entry += "CompanyName";
 
-      if (VerQueryValueA(data, current_entry, &retbuf, (UINT*)&v_len))
+      if (VerQueryValueA(data, current_entry.c_str(), &retbuf, (UINT*)&v_len))
         company_name = (char*)retbuf;
     }
 
@@ -332,19 +344,25 @@ public:
 
 #endif  // LOG_PLATFORM_WINDOWS
 
-#if !defined(LOG_PLATFORM_WINDOWS)
+#if !defined(LOG_PLATFORM_WINDOWS) && !defined(LOG_PLATFORM_MAC)
   static int module_callback(struct dl_phdr_info* info, size_t size, void* data) {
     std::list<module_entry_t>* modules = (std::list<module_entry_t>*)data;
 
-    if (!info || size < sizeof(struct dl_phdr_info)) return 0;
+    if (!data) return 0;
 
-    if (!info->dlpi_name || !strlen(info->dlpi_name)) return 0;
+    if (!info || size < sizeof(struct dl_phdr_info))
+      return 0;
 
     module_entry_t e;
     e.base_address = info->dlpi_addr;
 
-    e.image_name = info->dlpi_name;
-    e.module_name = info->dlpi_name;
+    if (!info->dlpi_name || !strlen(info->dlpi_name)) {
+      e.image_name = module_name_by_addr((void*)info->dlpi_addr);
+      e.module_name = e.image_name;
+    } else {
+      e.image_name = info->dlpi_name;
+      e.module_name = info->dlpi_name;
+    }
 
     size_t last_delim = e.module_name.find_last_of('/');
     if (last_delim == std::string::npos)
@@ -404,7 +422,80 @@ public:
       modules.push_back(e);
     }
 
-#else   // LOG_PLATFORM_WINDOWS
+#elif defined(LOG_PLATFORM_MAC)   // LOG_PLATFORM_WINDOWS
+    uint32_t img_count = _dyld_image_count();
+    for(uint32_t i=0; i<img_count; i++) {
+      module_entry_t e;
+      intptr_t last_mod_addr = 0;
+      struct load_command* first_cmd = NULL;
+      uint32_t commands_count = 0;
+
+      e.module_name = _dyld_get_image_name(i);
+      const mach_header_64* header = (mach_header_64*) _dyld_get_image_header(i);
+      if (!header)
+        continue;
+
+      if (header->magic == MH_MAGIC_64) {
+        last_mod_addr = ((intptr_t)header) + sizeof(*header) + header->sizeofcmds;
+        commands_count = header->ncmds;
+        first_cmd = (struct load_command*)(header + 1);
+      }
+
+      if (header->magic == MH_MAGIC) {
+        const mach_header* hdr86 = (mach_header*)header;
+        last_mod_addr = ((intptr_t)hdr86) + sizeof(*hdr86) + hdr86->sizeofcmds;
+        commands_count = hdr86->ncmds;
+        first_cmd = (struct load_command*)(hdr86 + 1);
+      }
+
+      struct load_command* lc = first_cmd;
+      for (uint32_t j = 0; j<commands_count; j++) {
+        if (lc->cmd == LC_SEGMENT) {
+          struct segment_command* ss = (struct segment_command*)lc;
+
+          if (!strcmp(ss->segname, "__TEXT")) {
+            intptr_t base_seg_addr = ss->vmaddr;
+            if (base_seg_addr == 0)
+              base_seg_addr = (intptr_t)header;
+
+            intptr_t last_seg_addr = base_seg_addr + ss->vmsize;
+            if (last_seg_addr > last_mod_addr)
+              last_mod_addr = last_seg_addr;
+          }
+        }
+
+        if (lc->cmd == LC_SEGMENT_64) {
+          struct segment_command_64* ss = (struct segment_command_64*)lc;
+
+          if (!strcmp(ss->segname, "__TEXT")) {
+            intptr_t base_seg_addr = ss->vmaddr;
+            if (base_seg_addr == 0)
+              base_seg_addr = (intptr_t)header;
+
+            intptr_t last_seg_addr = base_seg_addr + ss->vmsize;
+            if (last_seg_addr > last_mod_addr)
+              last_mod_addr = last_seg_addr;
+          }
+        }
+
+        lc = (load_command*)(((intptr_t)lc) + lc->cmdsize);
+      }
+
+      e.base_address = (intptr_t)header;
+      e.size = last_mod_addr - e.base_address;
+
+      int ver1 = NSVersionOfLinkTimeLibrary(e.module_name.c_str());
+      int ver2 = NSVersionOfRunTimeLibrary(e.module_name.c_str());
+      char ver[256];
+      ver[0] = 0;
+
+      str::xsnprintf(ver, sizeof(ver)-1, "%d", ver1 == -1 ? ver2 : ver1);
+      e.file_version = ver;
+
+      e.image_name = e.module_name;
+      modules.push_back(e);
+    }
+#else
     dl_iterate_phdr(&module_callback, &modules);
 #endif  // LOG_PLATFORM_WINDOWS
 

@@ -61,7 +61,8 @@ public:
     set_console_text_color(default_color);
   }
 
-  void flush() LOG_METHOD_OVERRIDE {
+  void flush(bool wait_ack) LOG_METHOD_OVERRIDE {
+    (void)wait_ack;
   }
 
   void close() LOG_METHOD_OVERRIDE {

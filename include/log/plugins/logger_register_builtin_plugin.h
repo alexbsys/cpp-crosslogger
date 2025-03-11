@@ -6,6 +6,8 @@
 #include <log/logger_interfaces.h>
 #include <sstream>
 
+#if LOG_ENABLED
+
 #include "logger_ini_config_plugin.h"
 #include "logger_scroll_file_output_plugin.h"
 #include "logger_binary_command_plugin.h"
@@ -97,5 +99,7 @@ public:
 };
 
 }//namespace logging
+
+#endif /*LOG_ENABLED*/
 
 #endif /*LOGGER_REGISTER_BUILTIN_PLUGIN*/

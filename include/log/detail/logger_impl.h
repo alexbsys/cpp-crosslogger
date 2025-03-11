@@ -74,7 +74,7 @@ public:
     mt::writer_spinlock lock(locker_);
 
     if (!find_cached_module(module_name.c_str(), base_addr, end_addr)) {
-      cache_module_t mod;
+      cache_module_type mod;
       mod.base_addr = base_addr;
       mod.end_addr = end_addr;
       mod.name = module_name;
@@ -87,7 +87,7 @@ public:
 
 private:
   bool find_cached_module(const char* name, intptr_t base_addr, intptr_t end_addr) const {
-    for (std::vector<cache_module_t>::const_iterator i = cached_modules_.cbegin();
+    for (std::vector<cache_module_type>::const_iterator i = cached_modules_.cbegin();
       i != cached_modules_.cend(); i++) {
       if (i->base_addr == base_addr && i->end_addr == end_addr && i->name == name)
         return true;
@@ -95,20 +95,20 @@ private:
     return false;
   }
 
-  typedef struct _cache_module_t {
+  typedef struct _cache_module_type {
     intptr_t base_addr;
     intptr_t end_addr;
     std::string name;
-  } cache_module_t;
+  } cache_module_type;
 
-  std::vector<cache_module_t> cached_modules_;
+  std::vector<cache_module_type> cached_modules_;
   mutable mt::read_write_spinlock locker_;
 };
 
 
 
 #if LOG_USE_MACRO_HEADER_CACHE
-struct log_macro_cache_t {
+struct log_macro_cache_type {
   bool valid_;
 
   std::string processed_cached_hdr_full;
@@ -127,7 +127,7 @@ struct log_macro_cache_t {
 
   mt::read_write_spinlock cache_lock_;
 
-  log_macro_cache_t() : valid_(false), processed_cached_global_verb_level(0), processed_cached_verb_level(0), processed_cached_line_num(0), processed_cached_millitm(0),
+  log_macro_cache_type() : valid_(false), processed_cached_global_verb_level(0), processed_cached_verb_level(0), processed_cached_line_num(0), processed_cached_millitm(0),
     processed_cached_pid(0), processed_cached_tid(0)  {}
 };
 #endif /*LOG_USE_MACRO_HEADER_CACHE*/
@@ -153,6 +153,17 @@ class logger : public logger_interface {
     {}
   };
 
+  struct log_storage_item {
+    std::string var_name_;
+    uint64_t u64_value_;
+    int64_t i64_value_;
+    void* pv_value_;
+    void(*free_fn_)(logger_interface* logger, const char* key, uint64_t u64_value, int64_t i64_value, void* pv_value);
+
+    log_storage_item() : u64_value_(0), i64_value_(0), pv_value_(nullptr), free_fn_(nullptr) {}
+  };
+
+  std::list<log_storage_item> log_storage_;
   log_config log_config_;
 
   std::map<int, logging::shared_ptr<logger_plugin_interface> > cmd_refs_;
@@ -173,6 +184,7 @@ class logger : public logger_interface {
 #endif  // LOG_SHARED
 
   LOG_MT_MUTEX mt_buffer_lock_;
+  mutable LOG_MT_MUTEX mt_storage_lock_;
 
 #if LOG_MULTITHREADED
   /** Log record message structure */
@@ -207,15 +219,17 @@ private:
   static void*
 #endif  // LOG_PLATFORM_WINDOWS
       log_thread_fn(void* data) {
-    const int kPollWriteEventMs = 250;
+    const int kPollWriteEventMs = 300;
     utils::set_current_thread_name("logger_thread");
     logger* log = reinterpret_cast<logger*>(data);
 
+    size_t plugins_count = log->plugin_mgr_->plugins_count();
+
+    std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
+    log->plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
+
     while (true) {
       std::list<log_record> log_records;
-      //std::list<plugin_data> outputs;
-      std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
-
       long mt_terminating;
 
       // mutex locked section
@@ -230,8 +244,9 @@ private:
         std::copy(log->mt_buffer_.begin(), log->mt_buffer_.end(), std::back_inserter(log_records));
         log->mt_buffer_.clear();
 
-        log->plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
-        //outputs = log->plugins_[kLogPluginTypeOutput];
+        if (plugins_count != log->plugin_mgr_->plugins_count()) {
+          log->plugin_mgr_->query_plugins<logger_output_plugin_interface>(kLogPluginTypeOutput, output_plugins);
+        }
 
         mt_terminating = log->mt_terminating_;
       }
@@ -253,7 +268,7 @@ private:
       if (mt_terminating) {
         for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
           it != output_plugins.cend(); it++) {
-            (*it)->flush();
+            (*it)->flush(true);
             (*it)->close();
         }
 
@@ -346,7 +361,7 @@ private:
     }
   }
 
-  std::string process_config_macros_value(std::string val) const {
+  std::string process_config_macros_value(std::string val) const LOG_METHOD_OVERRIDE {
     while (true) {
       bool replaced_some = false;
 
@@ -402,6 +417,83 @@ private:
 
   int ref_counter() const LOG_METHOD_OVERRIDE { return ref_counter_; }
 
+  bool set_storage_item(
+      const char* key,
+      uint64_t u64_value,
+      int64_t i64_value,
+      void* pv_value,
+      void(*free_fn)(logger_interface* logger, const char* key, uint64_t u64_value, int64_t i64_value, void* pv_value)) LOG_METHOD_OVERRIDE {
+
+    mt::mutex_scope_lock lock(&mt_storage_lock_);
+    std::string key_str(key);
+    for(std::list<log_storage_item>::iterator it = log_storage_.begin(); it != log_storage_.end(); it++) {
+      if (it->var_name_ != key)
+        continue;
+
+      if (it->free_fn_) {
+        it->free_fn_(dynamic_cast<logger_interface*>(this), it->var_name_.c_str(), it->u64_value_, it->i64_value_, it->pv_value_);
+      }
+
+      it->u64_value_ = u64_value;
+      it->i64_value_ = i64_value;
+      it->pv_value_ = pv_value;
+      it->free_fn_ = free_fn;
+      return false;
+    }
+
+    log_storage_item item;
+    item.var_name_ = key_str;
+    item.u64_value_ = u64_value;
+    item.i64_value_ = i64_value;
+    item.free_fn_ = free_fn;
+    log_storage_.push_back(item);
+    return true;
+  }
+
+  bool unset_storage_item(
+      const char* key) LOG_METHOD_OVERRIDE {
+
+    mt::mutex_scope_lock lock(&mt_storage_lock_);
+    std::string key_str(key);
+    for(std::list<log_storage_item>::iterator it = log_storage_.begin(); it != log_storage_.end(); it++) {
+      if (it->var_name_ != key)
+        continue;
+
+      if (it->free_fn_) {
+        it->free_fn_(dynamic_cast<logger_interface*>(this), it->var_name_.c_str(), it->u64_value_, it->i64_value_, it->pv_value_);
+      }
+
+      log_storage_.erase(it);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool read_storage_item(
+      const char* key,
+      uint64_t* u64_value,
+      int64_t* i64_value,
+      void** pv_value) const LOG_METHOD_OVERRIDE {
+
+    mt::mutex_scope_lock lock(&mt_storage_lock_);
+    std::string key_str(key);
+    for(std::list<log_storage_item>::const_iterator it = log_storage_.cbegin(); it != log_storage_.cend(); it++) {
+      if (it->var_name_ != key)
+        continue;
+
+      if (u64_value)
+        *u64_value = it->u64_value_;
+      if (i64_value)
+        *i64_value = it->i64_value_;
+      if (pv_value)
+        *pv_value = it->pv_value_;
+      return true;
+    }
+
+    return false;
+  }
+
   void set_config_param(const char* key, const char* value) LOG_METHOD_OVERRIDE {
     std::string val(value ? value : "");
     cfg::set_value(user_code_config_, key, process_config_macros_value(val));
@@ -431,8 +523,12 @@ private:
     return plugin_mgr_->unregister_plugin_factory(plugin_factory_interface);
   }
 
+  void get_registered_plugin_factories(std::vector<logger_plugin_factory_interface*>& plugin_factories) const LOG_METHOD_OVERRIDE {
+    return plugin_mgr_->get_all_plugin_factories(plugin_factories);
+  }
 
-  void flush() LOG_METHOD_OVERRIDE {
+  void flush(bool wait_ack) LOG_METHOD_OVERRIDE {
+      {
     mt::mutex_scope_lock lock(&mt_buffer_lock_);
 
 #if LOG_MULTITHREADED
@@ -442,8 +538,11 @@ private:
     while(mt_buffer_.size()) {
       if (mt::wait_event(&buffer_devastated_, &mt_buffer_lock_, true, kPollBufferDevastatedEventMs))
         break;
+
+      break;
     }
 #endif  // LOG_MULTITHREADED
+      }
 
     std::vector<shared_ptr<logger_output_plugin_interface> > output_plugins;
     plugin_mgr_->query_plugins(kLogPluginTypeOutput, output_plugins);
@@ -451,7 +550,7 @@ private:
     // flush registered outputs
     for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
       it != output_plugins.cend(); it++) {
-      (*it)->flush();
+      (*it)->flush(wait_ack);
     }
   }
 
@@ -508,6 +607,7 @@ private:
     plugin_mgr_ = new plugin_manager(this);
 
     LOG_MT_MUTEX_INIT(&mt_buffer_lock_, NULL);
+    LOG_MT_MUTEX_INIT(&mt_storage_lock_, NULL);
 
     reload_config();
 
@@ -516,16 +616,6 @@ private:
     mt::create_event(&buffer_devastated_);
 
     log_thread_handle_ = mt::thread_start(&log_thread_fn, this);
-
-//#  ifdef LOG_PLATFORM_WINDOWS
-//
-//    DWORD thread_id;
-//    log_thread_handle_ = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&log_thread_fn,
-//                                     this, 0, &thread_id);    
-//#  else   /*LOG_PLATFORM_WINDOWS*/
-//    pthread_create(&log_thread_handle_, NULL, (void* (*)(void*)) & log_thread_fn, this);
-//#  endif  /*LOG_PLATFORM_WINDOWS*/
-
 #endif  /*LOG_MULTITHREADED*/
   }
 
@@ -561,7 +651,7 @@ private:
 
     for (std::vector<shared_ptr<logger_output_plugin_interface> >::const_iterator it = output_plugins.cbegin();
       it != output_plugins.cend(); it++) {
-      (*it)->flush();
+      (*it)->flush(true);
       (*it)->close();
     }
 
@@ -572,6 +662,7 @@ private:
 
 #if LOG_MULTITHREADED
     LOG_MT_MUTEX_DESTROY(&mt_buffer_lock_);
+    LOG_MT_MUTEX_DESTROY(&mt_storage_lock_);
 #endif  // LOG_MULTITHREADED
   }
 
@@ -853,7 +944,11 @@ private:
     if (cmd_it == cmd_refs_.end())
       return;
 
-    shared_ptr<logger_command_plugin_interface> cmd_plugin = dynamic_pointer_cast<logger_command_plugin_interface>(cmd_it->second);
+    shared_ptr<logger_plugin_interface> plug_ptr = cmd_it->second;
+    if (!plug_ptr)
+      return;
+
+    shared_ptr<logger_command_plugin_interface> cmd_plugin = dynamic_pointer_cast<logger_command_plugin_interface>(plug_ptr);
     if (!cmd_plugin)
       return;
 
@@ -939,7 +1034,7 @@ private:
 
  private:
 #if LOG_USE_MACRO_HEADER_CACHE
-  log_macro_cache_t cache;
+  log_macro_cache_type cache;
 #endif  // LOG_USE_MACRO_HEADER_CACHE
 
   std::string log_process_macroses_nocache(std::string format, 

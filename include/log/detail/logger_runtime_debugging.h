@@ -14,6 +14,7 @@
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 #if defined(LOG_PLATFORM_WINDOWS)
+#include <DbgHelp.h>
 
 #if defined(LOG_PLATFORM_64BIT)
 #define platform_dword_t DWORD64
@@ -37,44 +38,42 @@ class runtime_debugging {
 
 private:
   static std::string get_pdb_search_path(const std::string& config_sym_path) {
-    char pathBuffer[MAX_PATH];
-    std::stringstream symSearchPath;
+    const char* kPdbCurrDir = "\\pdb";
+    const int kPdbCurrDirLength = 5;  // length of buffer PdbCurrDir include terminate zero char
 
-    const char* PdbCurrDir = "\\pdb";
-    const int PdbCurrDirLength = 5;  // length of buffer PdbCurrDir include terminate zero char
+    char path_buffer[MAX_PATH];
+    std::stringstream sym_search_path;
 
-    if (GetCurrentDirectoryA(sizeof(pathBuffer), pathBuffer))
-      symSearchPath << pathBuffer << ";";
+    if (GetCurrentDirectoryA(sizeof(path_buffer), path_buffer))
+      sym_search_path << path_buffer << ";";
 
-    if (strlen(pathBuffer) < sizeof(pathBuffer) - PdbCurrDirLength) {
-      strcat(pathBuffer, PdbCurrDir);
-      symSearchPath << pathBuffer << ";";
-    }
+    std::string path_buffer_str = path_buffer;
+    path_buffer_str += kPdbCurrDir;
 
-    symSearchPath << utils::get_process_file_path() << ";";
-    symSearchPath << utils::get_process_file_path() << PdbCurrDir << ";";
+    sym_search_path << path_buffer_str << ";";
+
+    sym_search_path << utils::get_process_file_path() << ";";
+    sym_search_path << utils::get_process_file_path() << kPdbCurrDir << ";";
 
     if (config_sym_path.size()) {
-      symSearchPath << config_sym_path << ";";
-      symSearchPath << config_sym_path << PdbCurrDir << ";";
+      sym_search_path << config_sym_path << ";";
+      sym_search_path << config_sym_path << kPdbCurrDir << ";";
     }
 
-    if (strlen(pathBuffer) &&
-      strlen(pathBuffer) < sizeof(pathBuffer) - PdbCurrDirLength) {
-      strcat(pathBuffer, PdbCurrDir);
+    if (GetEnvironmentVariableA("_NT_SYMBOL_PATH", path_buffer, sizeof(path_buffer))) {
+      sym_search_path << path_buffer << ";";
     }
 
-    if (GetEnvironmentVariableA("_NT_SYMBOL_PATH", pathBuffer, sizeof(pathBuffer)))
-      symSearchPath << pathBuffer << ";";
+    if (GetEnvironmentVariableA("_NT_ALTERNATE_SYMBOL_PATH", path_buffer,
+      sizeof(path_buffer))) {
+      sym_search_path << path_buffer << ";";
+    }
 
-    if (GetEnvironmentVariableA("_NT_ALTERNATE_SYMBOL_PATH", pathBuffer,
-      sizeof(pathBuffer)))
-      symSearchPath << pathBuffer << ";";
+    if (GetEnvironmentVariableA("SYSTEMROOT", path_buffer, sizeof(path_buffer))) {
+      sym_search_path << path_buffer << ";";
+    }
 
-    if (GetEnvironmentVariableA("SYSTEMROOT", pathBuffer, sizeof(pathBuffer)))
-      symSearchPath << pathBuffer << ";";
-
-    std::string result = symSearchPath.str();
+    std::string result = sym_search_path.str();
     if (result.size() > 0) result = result.substr(0, result.size() - 1);
 
     return result;
@@ -466,6 +465,9 @@ public:
 
   static _Unwind_Reason_Code sysunwind_unwind_callback(struct _Unwind_Context* context,
                                               void* arg) {
+
+    __android_log_write(ANDROID_LOG_INFO, "LOGGER", "UNWIND CALLBACK ");
+
     sysunwind_backtrace_state* state = (sysunwind_backtrace_state *)arg;
     uintptr_t pc = _Unwind_GetIP(context);
     if (pc) {
@@ -511,7 +513,7 @@ public:
 
   static void get_current_stack_trace_string(std::string* out_result, int ignore_functions) {
     const int kMaxBacktraceDepth = 1024;
-    void* trace[kMaxBacktraceDepth];
+    void** trace = new void*[kMaxBacktraceDepth];
 
     sysunwind_backtrace_state state;
     state.current = trace;
@@ -522,8 +524,11 @@ public:
     int trace_len = (int)(state.current - trace);
 
     std::string result = get_stack_trace_string(trace, trace_len, ignore_functions);
+
     if (out_result)
       *out_result = result;
+
+    delete [] trace;
   }
 
 #  else /*LOG_USE_SYSUNWIND*/

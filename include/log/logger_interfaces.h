@@ -108,7 +108,7 @@ struct logger_output_plugin_interface : public virtual logger_plugin_interface {
   /**
    * \brief    flush output method
    */
-  virtual void flush() {}
+  virtual void flush(bool wait_ack) { (void)wait_ack; }
 
   /**
    * \brief    close output method
@@ -174,8 +174,27 @@ struct logger_interface {
 
   virtual ~logger_interface() {}
 
+  virtual bool set_storage_item(
+      const char* key,
+      uint64_t u64_value,
+      int64_t i64_value,
+      void* pv_value,
+      void(*free_fn)(logger_interface* logger, const char* key, uint64_t u64_value, int64_t i64_value, void* pv_value)) = 0;
+
+  virtual bool unset_storage_item(
+      const char* key) = 0;
+
+  virtual bool read_storage_item(
+      const char* key,
+      uint64_t* u64_value,
+      int64_t* i64_value,
+      void** pv_value) const = 0;
+
   virtual void set_config_param(const char* key, const char* value) = 0;
   virtual int get_config_param(const char* key, char* buffer, int buffer_size) const = 0;
+
+  // process string with all filters and macros. Useful for plugins
+  virtual std::string process_config_macros_value(std::string val) const = 0;
 
   virtual bool is_master() const = 0;
 
@@ -203,7 +222,7 @@ struct logger_interface {
     const char* source_file, int line_number) = 0;
 
   /** Flush all outputs */
-  virtual void flush() = 0;
+  virtual void flush(bool wait_ack) = 0;
 
   /** Reload configuration */
   virtual void reload_config() = 0;
@@ -212,6 +231,7 @@ struct logger_interface {
 
   virtual bool register_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
   virtual bool unregister_plugin_factory(logger_plugin_factory_interface* plugin_factory_interface) = 0;
+  virtual void get_registered_plugin_factories(std::vector<logger_plugin_factory_interface*>& plugin_factories) const = 0;
 
   /** Add plugin instance manually */
   virtual bool attach_plugin(logger_plugin_interface* plugin_interface) = 0;

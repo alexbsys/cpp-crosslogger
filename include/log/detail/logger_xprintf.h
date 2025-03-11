@@ -24,9 +24,11 @@ xprintf("%lld", 1234567812345678LL); "1234567812345678"
 #include <log/logger_config.h>
 #include <log/logger_pdefs.h>
 #include <log/logger_varargs.h>
+#include <math.h>
 
 /** Support for %lld  */
 #define LOG_OWN_VSNPRINTF_INT64_SUPPORT   1
+#define LOG_OWN_VSNPRINTF_FLOAT_SUPPORT   1
 
 namespace logging {
 namespace detail {
@@ -64,6 +66,24 @@ static int xputs_helper(char** outptr,
   return length;
 }
 
+static int xputws_helper(char** outptr,
+    const wchar_t* str, int max_chars, int current_length) {
+  const int max_chars_produced_by_xputc = LOG_OWN_VSNPRINTF_CR_CRLF ? 2 : 1;
+  int length = 0;
+
+  while (*str) {
+    if (current_length + max_chars_produced_by_xputc + length >= max_chars)
+      return -1;
+
+    wchar_t wch = *str++;
+    char ch = (char)wch;
+    length += xputc(outptr, ch);
+  }
+
+  return length;
+}
+
+
 /**
  * \brief    Printf to buffer used varargs
  * \param    outptr     Pointer to pointer to output buffer
@@ -79,17 +99,24 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
   const unsigned int kLeftJustified = 2;
   const unsigned int kSignFlag = 8;
   const unsigned int kLongFlag = 4;
-  const unsigned int kValue64BitFlag = 32;
+  const unsigned int kFloatFlag = 16;
+  const unsigned int kPrecisionPadded = 32;
+  const unsigned int kValue64BitFlag = 64;
   
-  unsigned int r, i, j, w, f;
-  unsigned long v;
+  unsigned int r = 10, i, j, w, f;
+  unsigned long v = 0;
 
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-  unsigned long long v64;
+  unsigned long long v64 = 0;
 #endif /*LOG_OWN_VSNPRINTF_INT64_SUPPORT*/
 
   char s[32], c, d, *p;
   int length = 0;
+
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+  int prec = 8;           // precision
+  unsigned long vp = 0;   // value after point
+#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
 
   // how many chars can be produced by xputc function
   // When \n->\r\n replace is enabled, xputc can produce 2 chars
@@ -110,11 +137,10 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 
 		f = 0;
 		c = *fmt++;	  /* Get first char of the sequense */
-		if (c == '0' || c == '.') {				/* Flag: '0' padded */
+    if (c == '0') {				/* Flag: '0' padded */
 			f = kZeroPadded;
 			c = *fmt++;
-		}
-		else {
+    } else {
 			if (c == '-') {			/* Flag: left justified */
 				f = kLeftJustified;
 				c = *fmt++;
@@ -123,6 +149,16 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 
 		for (w = 0; c >= '0' && c <= '9'; c = *fmt++)	/* Minimum width */
 			w = w * 10 + c - '0';
+
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+    if (c == '.') { /* precision */
+      f = kPrecisionPadded;
+      c = *fmt++;
+
+      for (prec = 0; c >= '0' && c <= '9'; c = *fmt++)	/* precision */
+        prec = prec * 10 + c - '0';
+    }
+#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
 
 		if (c == 'l' || c == 'L') {	/* Prefix: Size is long int */
 			f |= kLongFlag; c = *fmt++;
@@ -146,7 +182,7 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 			p = va_arg(arp, char*);
 
 			for (j = 0; p[j]; j++);
-			while (!(f & 2) && j++ < w) {
+            while (!(f & kLeftJustified) && j++ < w) {
               if (length + max_chars_produced_by_xputc >= out_chars_count)
                 return -1;
 				
@@ -157,7 +193,7 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 			if (s_len < 0)
               return -1;
 
-      length += s_len;
+            length += s_len;
 
 			while (j++ < w) {
               if (length + max_chars_produced_by_xputc >= out_chars_count)
@@ -166,6 +202,46 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
               length += xputc(outptr, ' ');
 			}
 			continue;
+        }
+
+        case 'W': /* wide string */ {
+            c = *fmt++;
+            if (!c)
+                break;				/* End of format? */
+
+            if (c != 's' && c != 'S') {
+              if (length + max_chars_produced_by_xputc >= out_chars_count)
+                return -1;
+              length += xputc(outptr, c);
+              continue;
+            }
+
+            int ws_len;
+
+            wchar_t* wp = va_arg(arp, wchar_t*);
+
+            for (j = 0; wp[j]; j++);
+            while (!(f & kLeftJustified) && j++ < w) {
+              if (length + max_chars_produced_by_xputc >= out_chars_count)
+                return -1;
+
+              length += xputc(outptr, ' ');
+            }
+
+            ws_len = xputws_helper(outptr, wp, out_chars_count, length);
+            if (ws_len < 0)
+              return -1;
+
+            length += ws_len;
+
+            while (j++ < w) {
+              if (length + max_chars_produced_by_xputc >= out_chars_count)
+                return -1;
+
+              length += xputc(outptr, ' ');
+            }
+
+            continue;
         }
 		case 'C':  /* Character */
             if (length + max_chars_produced_by_xputc >= out_chars_count)
@@ -192,6 +268,14 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 
       r = 16;
       break;
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+    case 'F':
+      f |= kFloatFlag;
+      if (sizeof(double) == 8)
+        f |= kValue64BitFlag;
+      r=10;
+      break;
+#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
 		default:					/* Unknown type (passthrough) */
             if (length + max_chars_produced_by_xputc >= out_chars_count)
               return -1;
@@ -212,6 +296,30 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
     else if (d == 'D') {
       v = (long)va_arg(arp, int);
     }
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+    else if (d == 'F') {
+      double fv = (float)va_arg(arp, double);
+      if (fv < 0.0) {
+        f |= kSignFlag;
+        fv = -fv;
+      }
+
+      v = (unsigned long)fv;
+#if LOG_OWN_VSNPRINTF_INT64_SUPPORT
+      v64 = (unsigned long)fv;
+#endif //LOG_OWN_VSNPRINTF_INT64_SUPPORT
+
+      double fvp = fv - v;
+      for (int z=0; z<prec; z++) {
+        fvp *= 10.0f;
+        vp = (long)fvp;
+        if (!(f& kPrecisionPadded)) {
+          if (vp * pow(10,prec - z) == (long)(fvp * pow(10,prec - z)))
+            break;
+        }
+      }
+    }
+#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
     else {
       v = (long)va_arg(arp, unsigned int);
     }
@@ -229,6 +337,26 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 
 		i = 0;
     int continue_process = 0;
+
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+    if (f & kFloatFlag && vp) {
+      do {
+        {
+          d = (char)(vp % r);
+          vp /= r;
+          continue_process = !!vp;
+        }
+
+        if (d > 9)
+          d += (c == 'x') ? 0x27 : 0x07;
+
+        s[i++] = d + '0';
+      } while (continue_process && i < sizeof(s));
+
+      if (i < sizeof(s))
+        s[i++] = '.';
+    }
+#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
 
     do {
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT

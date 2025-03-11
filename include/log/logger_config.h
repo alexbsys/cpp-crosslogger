@@ -30,11 +30,7 @@
 /// and auto-debugging If auto debugging is on it turns on automatically On linux you need
 /// to define linker flag -ldl
 #ifndef LOG_USE_MODULEDEFINITION
-#ifndef __APPLE__
 #define LOG_USE_MODULEDEFINITION 1
-#else //__APPLE__
-#define LOG_USE_MODULEDEFINITION 0
-#endif //__APPLE__
 #endif  // LOG_USE_MODULEDEFINITION
 
 /// Use auto debugging. It need for stack trace
@@ -68,7 +64,11 @@
 
 /// Use one shared logging object for process
 #ifndef LOG_SHARED
+#ifdef __APPLE__
+#define LOG_SHARED 0
+#else //__APPLE__
 #define LOG_SHARED 1
+#endif //__APPLE__
 #endif  // LOG_SHARED
 
 /// Enable or disable logger configuration compiler warnings

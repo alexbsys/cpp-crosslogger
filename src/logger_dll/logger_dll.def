@@ -19,3 +19,4 @@ EXPORTS
     c_logger_deref
     __c_logger_get_logger
 	__c_logger_flush
+  __c_logger_shutdown

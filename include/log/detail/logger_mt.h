@@ -87,8 +87,8 @@ static long atomic_exchange(long volatile* variable, long new_val) {
   return __atomic_exchange_n(variable, new_val, __ATOMIC_SEQ_CST);
 }
 
-static bool atomic_compare_exchange(long volatile* variable, long new_val, long expected_val) {
-  return __atomic_compare_exchange_n(variable, &expected_val, new_val, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+static bool atomic_compare_exchange(long volatile* variable, long new_val, long* expected_val) {
+  return __atomic_compare_exchange_n(variable, expected_val, new_val, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
 #elif LOG_ATOMIC_IMPL==LOG_ATOMIC_IMPL_WINDOWS
@@ -105,10 +105,13 @@ static long atomic_exchange(long volatile* variable, long new_val) {
   return _InterlockedExchange(variable, new_val);
 }
 
-static bool atomic_compare_exchange(long volatile* variable, long new_val, long expected_val) {
-  long old_val = _InterlockedCompareExchange(variable, new_val, expected_val);
-  return old_val == expected_val;
+static int atomic_compare_exchange(long volatile* variable, long new_val, long* expected_val) {
+  long old_val = _InterlockedCompareExchange(variable, new_val, *expected_val);
+  int ret = old_val == *expected_val;
+  *expected_val = old_val;
+  return ret;
 }
+
 #elif LOG_ATOMIC_IMPL==LOG_ATOMIC_IMPL_CXX11 /*end of LOG_CPP_X11*/
 // C++11 implementation
 static long atomic_increment(std::atomic<long>* variable) {
@@ -148,13 +151,25 @@ static long atomic_exchange(long volatile* variable, long new_val) {
   return *variable;
 }
 
-static bool atomic_compare_exchange(long volatile* variable, long new_val, long expected_val) {
+static bool atomic_compare_exchange(long volatile* variable, long new_val, long* expected_val) {
   long old_val = *variable;
-  *variable = new_val;
-  return old_val == expected_val;
+  if (old_val == *expected_val)
+      *variable = new_val;
+
+  int ret = old_val == *expected_val;
+  *expected_val = old_val;
+
+  return ret;
 }
 
 #endif /*end of LOG_ATOMIC_IMPL==LOG_ATOMIC_IMPL_NOATOMIC*/
+
+static long atomic_read(atomic_long_type* variable) {
+  long exp_val = 0;
+  atomic_compare_exchange(variable, 0, &exp_val);
+  return exp_val;
+}
+
 }//namespace mt
 }//namespace detail
 }//namespace logging
@@ -224,7 +239,11 @@ static void yield() {
 #elif defined(LOG_PLATFORM_ANDROID)
   sched_yield();
 #elif defined(LOG_HAVE_PTHREAD)
+#if defined(LOG_PLATFORM_MAC)
+  pthread_yield_np();
+#else /*LOG_PLATFORM_MAC*/
   pthread_yield();
+#endif /*LOG_PLATFORM_MAC*/
 #elif defined(LOG_CPP_X11)
   std::this_thread::yield();
 #else
@@ -254,13 +273,33 @@ static void thread_join(LOG_MT_THREAD_HANDLE_TYPE* handle) {
 #endif  // LOG_PLATFORM_WINDOWS
 }
 
+static uint64_t thread_get_current_id() {
+#ifdef LOG_PLATFORM_WINDOWS
+  return static_cast<uint64_t>(GetCurrentThreadId());
+#else   // LOG_PLATFORM_WINDOWS
+  return reinterpret_cast<uint64_t>((void*)pthread_self());
+#endif  // LOG_PLATFORM_WINDOWS
+}
+
+static uint64_t thread_get_id(LOG_MT_THREAD_HANDLE_TYPE* handle) {
+#ifdef LOG_PLATFORM_WINDOWS
+  return GetThreadId(*handle);
+#else   // LOG_PLATFORM_WINDOWS
+  return reinterpret_cast<uint64_t>((void*)*handle);
+#endif  // LOG_PLATFORM_WINDOWS
+}
+
+
 static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mutex_locked, int wait_ms) {
 #ifdef LOG_PLATFORM_WINDOWS
   if (is_mutex_locked) {
     LOG_MT_MUTEX_UNLOCK(mutex);
   }
 
-  bool result = WaitForSingleObject(*evt, wait_ms) == WAIT_OBJECT_0;
+  DWORD wait_timeout = static_cast<DWORD>(wait_ms);
+  if (wait_ms < 0) wait_timeout = INFINITE;
+
+  bool result = WaitForSingleObject(*evt, wait_timeout) == WAIT_OBJECT_0;
 
   if (is_mutex_locked) {
    LOG_MT_MUTEX_LOCK(mutex);
@@ -274,10 +313,14 @@ static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mute
   struct timespec ts;
 
   gettimeofday(&tv, NULL);
-  ts.tv_sec = time(NULL) + wait_ms / 1000;
-  ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (wait_ms % 1000);
-  ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
-  ts.tv_nsec %= (1000 * 1000 * 1000);
+  if (wait_ms >= 0) {
+    ts.tv_sec = time(NULL) + wait_ms / 1000;
+    ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (wait_ms % 1000);
+    ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
+    ts.tv_nsec %= (1000 * 1000 * 1000);
+  } else {
+    ts.tv_sec += 500000000; // infinite
+  }
 
   if (!is_mutex_locked) {
     LOG_MT_MUTEX_LOCK(mutex);
@@ -314,12 +357,14 @@ public:
   void read_lock() {
 
     while (true) {
-      long readers = readers_;
+      long readers = atomic_read(&readers_);
       long writer_requests = writer_requests_;
 
       if (readers != kWriteLockActive && !writer_requests) {
         long new_readers = readers + 1;
-        if (atomic_compare_exchange(&readers_, new_readers, readers)) {
+        long exp_readers = readers;
+
+        if (atomic_compare_exchange(&readers_, new_readers, &exp_readers)) {
           // lock acquired
           return;
         }
@@ -331,10 +376,12 @@ public:
 
   void read_unlock() {
     while (true) {
-      long readers = readers_;
+      long readers = atomic_read(&readers_);
       if (readers != kWriteLockActive && readers > 0) {
         long new_readers = readers - 1;
-        if (atomic_compare_exchange(&readers_, new_readers, readers)) {
+        long exp_readers = readers;
+
+        if (atomic_compare_exchange(&readers_, new_readers, &exp_readers)) {
           // unlock successfull
           return;
         }
@@ -348,8 +395,9 @@ public:
     atomic_increment(&writer_requests_);
 
     while (true) {
-      long readers = readers_;
-      if (readers == 0 && atomic_compare_exchange(&readers_, kWriteLockActive, readers)) {
+      long readers = atomic_read(&readers_);
+
+      if (readers == 0 && atomic_compare_exchange(&readers_, kWriteLockActive, &readers)) {
         // write lock acquired
         break;
       }
@@ -362,8 +410,9 @@ public:
 
   void write_unlock() {
     while (true) {
-      long readers = readers_;
-      if (readers == kWriteLockActive && atomic_compare_exchange(&readers_, 0, readers)) {
+      long readers = atomic_read(&readers_);
+
+      if (readers == kWriteLockActive && atomic_compare_exchange(&readers_, 0, &readers)) {
         // write lock acquired
         break;
       }

@@ -149,9 +149,9 @@ struct shared_obj {
       result_ptr = VirtualAlloc((LPVOID)page, shared_page_mem_size,
         MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #else   // LOG_PLATFORM_WINDOWS
-      int page_bits;
 
 #if !defined(LOG_PLATFORM_ANDROID)
+      int page_bits;
       if (get_page_bits((void*)page, &page_bits)) continue;
 #endif
 

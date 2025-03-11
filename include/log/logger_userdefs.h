@@ -46,22 +46,45 @@
 #define LOG_STACKTRACE_ERROR
 #define LOG_STACKTRACE_FATAL
 
-#define DEFINE_LOGGER()
+#define DEFINE_LOGGER(on_create_fn)
 
 #define LOG_SET_VERBOSE_LEVEL(l)
 #define LOG_SET_REG_CONFIG_PATH(p)
 #define LOG_SET_INI_CONFIG_PATHS(p)
 
 #define LOGGER_VERBOSE_FATAL 0
-#define LOGGER_VERBOSE_ERROR 0
-#define LOGGER_VERBOSE_INFO 0
-#define LOGGER_VERBOSE_WARNING 0
-#define LOGGER_VERBOSE_DEBUG 0
-#define LOGGER_VERBOSE_OPTIMAL 0
-#define LOGGER_VERBOSE_MUTE 0
-#define LOGGER_VERBOSE_FATAL_ERROR 0
-#define LOGGER_VERBOSE_ALL 0
-#define LOGGER_VERBOSE_NORMAL 0
+#define LOGGER_VERBOSE_ERROR 1
+#define LOGGER_VERBOSE_INFO 2
+#define LOGGER_VERBOSE_WARNING 3
+#define LOGGER_VERBOSE_DEBUG 4
+#define LOGGER_VERBOSE_OPTIMAL 5
+#define LOGGER_VERBOSE_MUTE 6
+#define LOGGER_VERBOSE_FATAL_ERROR 7
+#define LOGGER_VERBOSE_ALL 8
+#define LOGGER_VERBOSE_NORMAL 9
+
+#define LOG_OBJMON_REGISTER_INSTANCE()
+#define LOG_OBJMON_UNREGISTER_INSTANCE()
+
+#define LOG_OBJMON_DUMP_DEBUG()
+#define LOG_OBJMON_DUMP_INFO()
+#define LOG_OBJMON_DUMP_ERROR()
+#define LOG_OBJMON_DUMP_FATAL()
+
+#define LOG_RELOAD_CONFIG()
+#define LOG_DUMP_STATE(v)
+
+#define LOG_REGISTER_PLUGIN_FACTORY(plugin_factory)
+#define LOG_UNREGISTER_PLUGIN_FACTORY(plugin_factory)
+
+#define LOG_ATTACH_PLUGIN(plugin)
+#define LOG_DETACH_PLUGIN(plugin)
+
+#define LOG_GET_VERSION()
+#define LOG_SET_CONFIG_PARAM(name,value)
+#define LOG_GET_CONFIG_PARAM(name, buf, size)
+#define LOG_FLUSH()
+
 
 #else  /*LOG_ENABLED*/
 
@@ -164,6 +187,9 @@
 #define LOGOBJ_FLUSH(logobj) \
   __c_logger_flush((logobj))
 
+#define LOGOBJ_SHUTDOWN() \
+  __c_logger_shutdown()
+
 #define LOG_GET_LOGGER() \
   __c_logger_get_logger()
 
@@ -174,16 +200,14 @@
 #define LOG_STREAM(v) \
   (LOG_GET_LOGGER() ? LOGOBJ_STREAM(LOG_GET_LOGGER(), (v)) : logging::log_stream(NULL,(v)))
 
-//  LOGOBJ_GET_DEFAULT_LOGGER()->stream((v), LOG_GET_CALLER_ADDR, \
-//      __FUNCTION__, __FILE__, __LINE__)
-
-
 #endif /*LOG_CPP*/
 
 
-
-
-#define LOGOBJ_GET_DEFAULT_LOGGER() (0L)
+#if LOG_CPP_X11
+#  define LOGOBJ_GET_DEFAULT_LOGGER() (nullptr)
+#else /*LOG_CPP_X11*/
+#  define LOGOBJ_GET_DEFAULT_LOGGER() (0L)
+#endif /*LOG_CPP_X11*/
 
 
 #endif
@@ -228,6 +252,8 @@
 #define LOG_FLUSH() \
   LOGOBJ_FLUSH(LOGOBJ_GET_DEFAULT_LOGGER())
 
+#define LOG_SHUTDOWN() \
+  LOGOBJ_SHUTDOWN()
 
 #define LOG_INFO(...)                                                                    \
   LOG_TEXT(LOGGER_VERBOSE_INFO, __VA_ARGS__)  
@@ -355,7 +381,8 @@
 
 /*#if LOG_USE_OBJMON*/
 #  define LOG_OBJMON_REGISTER_INSTANCE() { \
-  struct { unsigned int hash; const char* type_name; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
+  struct { unsigned int hash; const char* type_name; void* ptr; } \
+  param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
   LOG_CMD(0x1010, logging::logger_verbose_info, &param, 0); \
 }
 
@@ -416,12 +443,17 @@
 
 
 /*#if LOG_USE_OBJMON*/
+
+#ifdef LOG_COMPILER_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4250)
+#endif /*LOG_COMPILER_MSVC*/
+
 #define LOG_OBJMON_REGISTER_INSTANCE() { \
-   struct { unsigned int hash; const char* type_name; void* ptr; } param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
+   struct { unsigned int hash; const char* type_name; void* ptr; } \
+   param = { (unsigned int)typeid(*this).hash_code(), typeid(*this).name(), this }; \
    LOG_CMD(0x1010, LOGGER_VERBOSE_INFO, &param, 0); \
 }
-
-//   __c_logger_log_cmd(0x1010, logger_verbose_info, LOG_GET_CALLER_ADDR, __FUNCTION__, __FILE__, __LINE__, &param, 0) \
 
 
 #define LOG_OBJMON_UNREGISTER_INSTANCE() { \
@@ -429,19 +461,36 @@
   LOG_CMD(0x1011, LOGGER_VERBOSE_INFO, &param, 0); \
 }
 
+#define LOG_OBJMON_SET_USER_OBJ_INFO_CALLBACK(pcallback) { \
+  int(*pcb)(void* obj_ptr, const char* type_name, const struct tm* created, int created_ms, const char* creation_trace, char* out_ext_message); \
+  pcb = pcallback; \
+  LOG_CMD(0x1013, LOGGER_VERBOSE_INFO, (const void*)pcb, 0); \
+}
+
+#define LOG_OBJMON_GET_REGISTERED_OBJECTS_COUNT(pintvalue) { \
+  int obj_count = 0; \
+  LOG_CMD(0x1014, LOGGER_VERBOSE_INFO, &obj_count, 0); \
+  if (pintvalue) *pintvalue = obj_count; \
+}
+
+#ifdef LOG_COMPILER_MSVC
+#pragma warning(pop)
+#endif /*LOG_COMPILER_MSVC*/
+
+
 //  __c_logger_objmon_unregister(typeid(*this).hash_code(), this)
 #define LOG_OBJMON_DUMP_INFO()   LOG_CMD(0x1012, LOGGER_VERBOSE_INFO, NULL, 0)
 #define LOG_OBJMON_DUMP_DEBUG() LOG_CMD(0x1012, LOGGER_VERBOSE_DEBUG, NULL, 0)
 #define LOG_OBJMON_DUMP_WARNING() LOG_CMD(0x1012, LOGGER_VERBOSE_WARNING, NULL, 0)
 #define LOG_OBJMON_DUMP_ERROR() LOG_CMD(0x1012, LOGGER_VERBOSE_ERROR, NULL, 0)
 #define LOG_OBJMON_DUMP_FATAL() LOG_CMD(0x1012, LOGGER_VERBOSE_FATAL, NULL, 0)
-/*#endif  // LOG_USE_OBJMON*/
 
+#define LOG_OBJMON_DUMP_CONSOLE() LOG_CMD(0x1015, LOGGER_VERBOSE_FATAL, NULL, 0)
+
+/*#endif  // LOG_USE_OBJMON*/
 
 #endif /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
 
-
 #endif /*LOG_ENABLED*/
-
 
 #endif /*LOGGER_USERDEFS_HEADER*/

@@ -86,8 +86,8 @@
 #define LOG_PLATFORM_WINDOWS
 #endif  //_WIN32
 
-#ifdef __ANDROID__
-#define LOG_PLATFORM_ANDROID
+#if defined(__ANDROID__) && !defined(LOG_PLATFORM_ANDROID)
+#define LOG_PLATFORM_ANDROID  1
 #endif /*__ANDROID__*/
 
 

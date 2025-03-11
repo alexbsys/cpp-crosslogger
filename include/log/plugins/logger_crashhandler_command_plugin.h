@@ -137,13 +137,13 @@ class unhandled_exceptions_processor {
         ex_ptrs->ExceptionRecord->ExceptionAddress);
 
     LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, message.c_str());
-    logger_obj->flush();
+    logger_obj->flush(true);
     
     // Log modules
     LOGOBJ_CMD(logger_obj, 0x1002, logger_verbose_fatal, NULL, 0);
     //    LOG_MODULES_FATAL();
 
-    logger_obj->flush();
+    logger_obj->flush(true);
 
     char buf[512];
 
@@ -154,7 +154,7 @@ class unhandled_exceptions_processor {
 
     LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "Stack trace:\n%s",
               runtime_debugging::get_stack_trace_string(ex_ptrs->ContextRecord, 0, config_sym_path).c_str());
-    logger_obj->flush();
+    logger_obj->flush(true);
 #endif  // LOG_AUTO_DEBUGGING
 
     int millisec;
@@ -214,7 +214,7 @@ class unhandled_exceptions_processor {
       create_minidump(ex_ptrs, dump_name);
     }
 
-    logger_obj->flush();
+    logger_obj->flush(true);
 
     if (exit_on_crash) {
       if (show_message_on_crash) {
@@ -226,14 +226,12 @@ class unhandled_exceptions_processor {
       }
     }
 
-    std::string addr_str;
-    if (logger_obj->get_config_param("crash_dump::PreviousExceptionFilterAddress", buf, sizeof(buf)))
-      addr_str = buf;
-
-    long long addr = atoll(addr_str.c_str());
-    uint64_t addr64 = addr < 0 ? (-addr + 0x8000000000000000ULL) : addr;
-    void * prev_exception_filter = reinterpret_cast<void*>(addr64);
-
+    void * prev_exception_filter = nullptr;
+    logger_obj->read_storage_item(
+          "crash_dump::PreviousExceptionFilterAddress",
+          nullptr,
+          nullptr,
+          &prev_exception_filter);
 
     if (prev_exception_filter) {
       LPTOP_LEVEL_EXCEPTION_FILTER prev_ex_filter = reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(prev_exception_filter);
@@ -245,6 +243,43 @@ class unhandled_exceptions_processor {
 };
 #else   // defined(LOG_PLATFORM_WINDOWS)
 
+struct signame {
+  int sig;
+  const char name[16];
+};
+
+struct prev_handlers_info {
+  int dummy_;
+#if defined(LOG_PLATFORM_WINDOWS)
+  void* prev_exception_filter_;
+
+  prev_handlers_info() {
+    dummy_ = 0;
+    prev_exception_filter_ = nullptr;
+  }
+#else //defined(LOG_PLATFORM_WINDOWS)
+  struct sigaction old_sa_segv_;
+  struct sigaction old_sa_trap_;
+  struct sigaction old_sa_ill_;
+
+  prev_handlers_info() {
+    dummy_ = 0;
+    memset(&old_sa_segv_, 0, sizeof(old_sa_segv_));
+    memset(&old_sa_trap_, 0, sizeof(old_sa_trap_));
+    memset(&old_sa_ill_, 0, sizeof(old_sa_ill_));
+  }
+#endif //defined(LOG_PLATFORM_WINDOWS)
+};
+
+static void execute_prev_handler(struct sigaction* sa, int sig, siginfo_t* info, void* secret) {
+  if (sa->sa_sigaction) {
+      sa->sa_sigaction(sig, info, secret);
+  } else {
+    if (sa->sa_handler && sa->sa_handler != SIG_DFL && sa->sa_handler != SIG_IGN)
+      sa->sa_handler(sig);
+  }
+}
+
 /**
  * \brief  Crash handler for UNIX-based platforms
  * \param  sig     Signal code
@@ -254,6 +289,19 @@ class unhandled_exceptions_processor {
 static void crash_handler(int sig, siginfo_t* info, void* secret) {
   using namespace detail;
 
+  const struct signame signames[] = {
+    { SIGABRT, "SIGABRT" },
+    { SIGBUS, "SIGBUS" },
+    { SIGFPE, "SIGFPE" },
+    { SIGSEGV, "SIGSEGV" },
+    { SIGILL, "SIGILL" },
+#ifndef __APPLE__
+    { SIGSTKFLT, "SIGSTKFLT" },
+#endif //__APPLE__
+    { SIGTRAP, "SIGTRAP" },
+    { -1, "OTHER" }
+  };
+
 //  void* trace[1024];
   ucontext_t* uc = (ucontext_t*)secret;
   logging::logger_interface* logger_obj = NULL;
@@ -262,20 +310,43 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   if (uc) {
 #if defined(LOG_CPU_INTEL)
 #ifdef LOG_PLATFORM_64BIT
-    pc = (void*)uc->uc_mcontext.gregs[REG_RIP];
+    #if defined (LOG_PLATFORM_MAC)
+      if (uc->uc_mcontext)
+        pc = (void*)uc->uc_mcontext->__ss.__rip;
+    #else /*NOT MAC*/
+      pc = (void*)uc->uc_mcontext.gregs[REG_RIP];
+    #endif
 #endif  // LOG_PLATFORM_64BIT
 #ifdef LOG_PLATFORM_32BIT
-    pc = (void*)uc->uc_mcontext.gregs[REG_EIP];
+    #if defined(LOG_PLATFORM_MAC)
+      if (uc->uc_mcontext)
+        pc = (void*)uc->uc_mcontext->__ss.__eip;
+    #else /*NOT MAC*/
+      pc = (void*)uc->uc_mcontext.gregs[REG_EIP];
+    #endif
 #endif  // LOG_PLATFORM_32BIT
 #endif /*LOG_CPU_INTEL*/
 
 #if defined(LOG_CPU_ARM)
 #ifdef LOG_PLATFORM_32BIT
+
+#ifdef LOG_PLATFORM_MAC
+    if (uc->uc_mcontext)
+      pc = (void*)uc->uc_mcontext->__ss.__pc;
+#else
     pc = (void*)uc->uc_mcontext.fault_address;
+#endif
+
 #endif /*LOG_PLATFORM_32BIT*/
 
 #ifdef LOG_PLATFORM_64BIT
-    pc = (void*)uc->uc_mcontext.fault_address;
+#ifdef LOG_PLATFORM_MAC
+    if (uc->uc_mcontext)
+      pc = (void*)uc->uc_mcontext->__ss.__pc;
+#else
+      pc = (void*)uc->uc_mcontext.fault_address;
+#endif
+
 #endif /*LOG_PLATFORM_64BIT*/
 #endif /*LOG_CPU_ARM*/
   }
@@ -288,40 +359,54 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
 
   if (!logger_obj) {
 #if LOG_ANDROID_SYSLOG
-    __android_log_write(ANDROID_LOG_FATAL, "LOGGER", "FATAL: cannot find logger object");
+    //__android_log_write(ANDROID_LOG_FATAL, "LOGGER", "FATAL: cannot find logger object");
 #endif  // LOG_ANDROID_SYSLOG
 
-    printf("FATAL: cannot find logger object\n");
-    abort();
+    //printf("FATAL: cannot find logger object\n");
     exit(-1);
+    return;
   }
 
-  std::string message = str::stringformat("*** Got signal %d, faulty address %p, from %p", sig,
-                                     info->si_addr, pc);
+  const char* sname = "UNK";
+
+  for(int i=0; ; i++) {
+    if (signames[i].sig == -1) {
+      sname = signames[i].name;
+      break;
+    }
+
+    if (signames[i].sig == sig) {
+      sname = signames[i].name;
+      break;
+    }
+  }
+
+  std::string message = str::stringformat("*** Got signal %d (%s), faulty address %p, from %p, ctx %p", sig, sname,
+                                     info ? info->si_addr : 0, pc, secret);
 
   LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, message.c_str());
-  logger_obj->flush();
-
+  logger_obj->flush(true);
 
   // log modules
   LOGOBJ_CMD(logger_obj, 0x1002, logger_verbose_fatal, NULL, 0);
-//  LOG_MODULES_FATAL;
+  logger_obj->flush(true);
 
 //  int trace_size = backtrace(trace, 1024);
 //  trace[1] = pc;
 
   std::string result;
-  runtime_debugging::get_current_stack_trace_string(&result, 0);
-
   LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** STACKTRACE ***\n");
-  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, result.c_str());
-  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** END STACKTRACE ***");
+  logger_obj->flush(true);
 
-  logger_obj->flush();
+  runtime_debugging::get_current_stack_trace_string(&result, 1);
+
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, result.c_str());
+  logger_obj->flush(true);
+  LOGOBJ_TEXT(logger_obj, logger_verbose_fatal, "*** END STACKTRACE ***");
 
   // dump objects
   LOGOBJ_CMD(logger_obj, 0x1012, logger_verbose_fatal, NULL, 0);
-  logger_obj->flush();
+  logger_obj->flush(true);
 
 
 #if LOG_RELEASE_ON_APP_CRASH
@@ -336,34 +421,73 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
   printf("%s\n", message.c_str());
 #endif  // LOG_SHOW_MESSAGE_ON_FATAL_CRASH
 
-  abort();
-  exit(-1);
+  prev_handlers_info* prev_handlers;
+  if (logger_obj->read_storage_item("crash_dump::PreviousExceptionFilterAddress",
+                                    nullptr,
+                                    nullptr,
+                                    reinterpret_cast<void**>(&prev_handlers))) {
+    switch(sig) {
+    case SIGSEGV:
+      execute_prev_handler(&prev_handlers->old_sa_segv_, sig, info, secret);
+      break;
+    case SIGILL:
+      execute_prev_handler(&prev_handlers->old_sa_ill_, sig, info, secret);
+      break;
+    case SIGTRAP:
+      execute_prev_handler(&prev_handlers->old_sa_trap_, sig, info, secret);
+      break;
+    default:
+      break;
+    }
+  }
+
+//  abort();
+//  exit(-1);
+}
+
+// free function for logger storage
+static void storage_free_prev_handlers(
+    logger_interface* logger_obj,
+    const char* key,
+    uint64_t u64_val,
+    int64_t i64_val,
+    void* pv_val) {
+  if (!pv_val)
+    return;
+
+  prev_handlers_info* prev_handlers = reinterpret_cast<prev_handlers_info*>(pv_val);
+  delete prev_handlers;
 }
 
 #endif  // defined(LOG_PLATFORM_WINDOWS)
+
 
 static void init_unhandled_exceptions_handler(logger_interface* logger_obj) {
 #ifdef LOG_PLATFORM_WINDOWS
   using namespace detail;
 
+  // save previous exception filter as storage item in logger object
   void* prev_exception_filter = reinterpret_cast<void*>(SetUnhandledExceptionFilter(
       unhandled_exceptions_processor::crash_handler_exception_filter));
 
-  uint64_t addr = reinterpret_cast<uint64_t>(prev_exception_filter);
-  std::string addr_str = str::stringformat(LOG_FMT_U64, addr);
-
-  logger_obj->set_config_param("crash_dump::PreviousExceptionFilterAddress", addr_str.c_str());
-
+  logger_obj->set_storage_item("crash_dump::PreviousExceptionFilterAddress", 0, 0, prev_exception_filter, nullptr);
 
 #else   // LOG_PLATFORM_WINDOWS
   (void)logger_obj;
   struct sigaction sa;
+  struct sigaction old_sa;
 
+  memset(&sa, 0, sizeof(sa));
+  prev_handlers_info* prev_handlers = new prev_handlers_info();
   sa.sa_sigaction = crash_handler;
   sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0; // SA_RESTART;
+  sa.sa_flags = SA_SIGINFO; // SA_RESTART;
 
-  sigaction(SIGSEGV, &sa, NULL);
+  sigaction(SIGSEGV, &sa, &prev_handlers->old_sa_segv_);
+  sigaction(SIGTRAP, &sa, &prev_handlers->old_sa_trap_);
+  sigaction(SIGILL, &sa, &prev_handlers->old_sa_ill_);
+
+  logger_obj->set_storage_item("crash_dump::PreviousExceptionFilterAddress", 0, 0, prev_handlers, &storage_free_prev_handlers);
 #endif  // LOG_PLATFORM_WINDOWS
 }
 

@@ -15,6 +15,9 @@
 
 // can be replaced by other error mechanism
 #include <cassert>
+
+#include "detail/logger_mt.h"
+
 #define SHARED_ASSERT(x)    assert(x)
 
 namespace logging {
@@ -44,9 +47,11 @@ public:
     long use_count(void) const throw() // never throws
     {
         long count = 0;
-        if (NULL != pn)
+        volatile long* xpn = pn;
+
+        if (NULL != xpn)
         {
-            count = *pn;
+            count = *xpn;
         }
         return count;
     }
@@ -56,11 +61,14 @@ public:
     {
         if (NULL != p)
         {
-            if (NULL == pn)
+          volatile long* xpn = pn;
+            if (NULL == xpn)
             {
                 try
                 {
-                    pn = new long(1); // may throw std::bad_alloc
+                    volatile long* tpn = new volatile long(1); // may throw std::bad_alloc
+                    *tpn = 1; // ref=1 because it has been acquired
+                    pn = tpn;
                 }
                 catch (std::bad_alloc&)
                 {
@@ -70,7 +78,7 @@ public:
             }
             else
             {
-                ++(*pn);
+                detail::mt::atomic_increment(xpn);
             }
         }
     }
@@ -78,20 +86,26 @@ public:
     template<class U>
     void release(U* p) throw() // never throws
     {
-        if (NULL != pn)
+      volatile long* xpn = pn;
+
+        if (NULL != xpn)
         {
-            --(*pn);
-            if (0 == *pn)
+            detail::mt::atomic_decrement(xpn);
+            if (0 == *xpn)
             {
+                volatile long* tpn = pn;
+                pn = NULL;
                 delete p;
-                delete pn;
+
+                if (tpn)
+                  delete tpn;
             }
             pn = NULL;
         }
     }
 
 public:
-    long*   pn; //!< Reference counter
+  volatile long*   pn; //!< Reference counter
 };
 
 
@@ -220,8 +234,9 @@ private:
     /// @brief release the ownership of the px pointer, destroying the object when appropriate
     void release(void) throw() // never throws
     {
-        pn.release(px);
+        T* cur_px = px;
         px = NULL;
+        pn.release(cur_px);
     }
 
 private:
@@ -274,7 +289,11 @@ shared_ptr<T> static_pointer_cast(const shared_ptr<U>& ptr) // never throws
 template<class T, class U>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& ptr) // never throws
 {
-    T* p = dynamic_cast<typename shared_ptr<T>::element_type*>(ptr.get());
+    U* u = ptr.get();
+    if (!u)
+      return shared_ptr<T>();
+
+    T* p = dynamic_cast<typename shared_ptr<T>::element_type*>(u);
     if (NULL != p)
     {
         return shared_ptr<T>(ptr, p);

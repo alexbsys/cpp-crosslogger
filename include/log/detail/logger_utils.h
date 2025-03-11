@@ -5,9 +5,13 @@
 #include <log/logger_pdetect.h>
 #include <log/logger_sysinclib.h>
 
-#ifdef LOG_PLATFORM_ANDROID
+#if defined(LOG_PLATFORM_ANDROID) || defined(LOG_PLATFORM_LINUX)
 #include <sys/prctl.h>
-#endif /*LOG_PLATFORM_ANDROID*/
+#endif /*LOG_PLATFORM_ANDROID || LOG_PLATFORM_LINUX*/
+
+#ifdef LOG_PLATFORM_IOS
+#include <pthread.h>
+#endif //LOG_PLATFORM_IOS
 
 namespace logging {
 namespace detail {
@@ -43,10 +47,10 @@ public:
 
 #else /*LOG_PLATFORM_WINDOWS*/
 
-#  ifdef LOG_PLATFORM_ANDROID
+#  if defined (LOG_PLATFORM_ANDROID) || defined(LOG_PLATFORM_LINUX)
     (void)thread_id;
     prctl(PR_SET_NAME, (unsigned long) thread_name, 0, 0, 0);
-#  else /*LOG_PLATFORM_ANDROID*/
+#  else /*LOG_PLATFORM_ANDROID || LOG_PLATFORM_LINUX*/
     // unix has no thread names by default
     (void)thread_id; (void)thread_name;
 #  endif /*LOG_PLATFORM_ANDROID*/
@@ -61,9 +65,13 @@ public:
     set_thread_name(GetCurrentThreadId(), thread_name);
 #endif /*LOG_PLATFORM_WINDOWS*/
 
-#ifdef LOG_PLATFORM_ANDROID
+#if defined(LOG_PLATFORM_ANDROID) || defined(LOG_PLATFORM_LINUX)
     set_thread_name(0, thread_name);
-#endif /*LOG_PLATFORM_ANDROID*/
+#endif /*LOG_PLATFORM_ANDROID || LOG_PLATFORM_LINUX*/
+
+#ifdef LOG_PLATFORM_IOS
+    pthread_setname_np(thread_name);
+#endif /*LOG_PLATFORM_IOS*/
   }
 
   static struct tm get_time(int& millisec) {
@@ -133,6 +141,7 @@ public:
 
   static std::string do_readlink(std::string const& path) {
     char buff[1024];
+    memset(buff, 0, sizeof(buff));
 
 #ifdef LOG_HAVE_UNISTD_H
     ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff) - 1);
@@ -222,6 +231,27 @@ public:
 #endif  // LOG_PLATFORM_WINDOWS
   }
 
+  static std::string get_module_file_path() {
+#ifdef LOG_PLATFORM_WINDOWS
+    char file_name[MAX_PATH];
+
+    HMODULE hmod = NULL;
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                      (LPCSTR)&get_module_file_path,
+                                      &hmod)) {
+      hmod = GetModuleHandleA(NULL);
+    }
+
+    GetModuleFileNameA(hmod, file_name, sizeof(file_name));
+
+    std::string path(file_name);
+    size_t last_delimiter = path.find_last_of(get_path_separator());
+    return path.substr(0, last_delimiter);
+#else  // LOG_PLATFORM_WINDOWS
+    return get_process_file_path();
+#endif  // LOG_PLATFORM_WINDOWS
+  }
+
   static std::string get_process_full_file_name() {
 #ifdef LOG_PLATFORM_WINDOWS
     char file_name[MAX_PATH];
@@ -254,6 +284,30 @@ public:
 #endif  // LOG_PLATFORM_WINDOWS
   }
 
+  static std::string get_module_full_file_name() {
+#ifdef LOG_PLATFORM_WINDOWS
+    char file_name[MAX_PATH];
+    HMODULE hmod = NULL;
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                      (LPCSTR)&get_module_file_path,
+                                      &hmod)) {
+      hmod = GetModuleHandleA(NULL);
+    }
+
+    GetModuleFileNameA(hmod, file_name, sizeof(file_name));
+
+    std::string path = file_name;
+
+    size_t last_delim = path.find_last_of(get_path_separator());
+    if (last_delim != std::string::npos) last_delim++;
+
+    return path.substr(last_delim, std::string::npos);
+#else  // LOG_PLATFORM_WINDOWS
+    return get_process_full_file_name();
+#endif  // LOG_PLATFORM_WINDOWS
+  }
+
+
   static std::string get_process_file_name() {
     std::string full_name = get_process_full_file_name();
 
@@ -267,6 +321,18 @@ public:
     return full_name.substr(start, count);
   }
 
+  static std::string get_module_file_name() {
+    std::string full_name = get_module_full_file_name();
+
+    size_t start = full_name.find_last_of(get_path_separator());
+    if (start != std::string::npos)
+      start++;
+    else
+      start = 0;
+
+    size_t count = full_name.find_last_of(".");
+    return full_name.substr(start, count);
+  }
 
   static unsigned long get_process_id() {
     unsigned long pid = 0;
@@ -289,8 +355,18 @@ public:
 #ifdef gettid
     tid = (unsigned long)gettid();
 #else  // gettid
-#if defined(SYS_gettid) && defined(LOG_HAVE_SYS_SYSCALL_H)
-    tid = (unsigned long)syscall(SYS_gettid);
+#if defined(SYS_thread_selfid) && defined(LOG_HAVE_SYS_SYSCALL_H)
+    int tid1 = syscall(SYS_thread_selfid);
+    if (tid1 > 0) {
+      tid = (unsigned long)tid1;
+    } else {
+#ifdef LOG_MULTITHREADED
+      uint64_t tid2 = 0;
+      pthread_threadid_np(NULL, &tid2);
+      if (tid2 != 0)
+        tid = (unsigned long)tid2;
+    }
+#endif  // LOG_MULTITHREADED
 #else  // defined(SYS_gettid) && defined(LOG_HAVE_SYS_SYSCALL_H)
 
 #ifdef LOG_MULTITHREADED

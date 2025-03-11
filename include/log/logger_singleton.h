@@ -8,6 +8,7 @@
 
 #include "logger_config.h"
 #include "logger_interfaces.h"
+#include <atomic>
 
 namespace logging {
 
@@ -35,8 +36,9 @@ class singleton : public logger_singleton_interface<_TIf> {
   LOG_INLINE _TIf* operator->() { return get(); }
 
   static void delete_fn(_TIf* obj, void* user_param) {
-    (void)user_param;
-    delete obj;
+    singleton* s = reinterpret_cast<singleton*>(user_param);
+    if (s->ptr_.compare_exchange_weak(obj, NULL))
+      delete obj;
   }
 
   _TIf* get() {
@@ -63,11 +65,8 @@ class singleton : public logger_singleton_interface<_TIf> {
   }
 
   void release() {
-    _TIf* ptr = ptr_;
+    _TIf* ptr = ptr_.exchange(NULL);
     bool need_delete = need_delete_;
-
-    ptr_ = NULL;
-    need_delete_ = false;
 
     int cnt = 0;
 
@@ -78,11 +77,12 @@ class singleton : public logger_singleton_interface<_TIf> {
       ptr = NULL;
     }
 
+    need_delete_ = false;
     if (ptr && need_delete) delete ptr;
   }
 
  private:
-  _TIf* ptr_;
+  std::atomic<_TIf*> ptr_;
   bool need_delete_;
 
   void(*on_create_fn_)(_TIf*);

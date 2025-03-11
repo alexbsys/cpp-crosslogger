@@ -23,15 +23,19 @@ void* _ReturnAddress(void);
 #pragma optimize("", off)
 
 #endif  // LOG_COMPILER_MSVC
-#if defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)   // Implementation for GCC compiler
+#if (defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)) && !defined(LOG_COMPILER_CLANG)   // Implementation for GCC compiler
 #pragma GCC push_options
 #pragma GCC optimize("O0")
-#endif  // defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)
+#endif  // (defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)) && !defined(LOG_COMPILER_CLANG)
 
 /**
 * \brief    get_caller_address function. Returns caller address
 * \return   caller address
 */
+#if defined(LOG_COMPILER_CLANG)
+__attribute__ ((optnone))
+#endif //defined(LOG_COMPILER_CLANG
+
 static void* logging_get_caller_address() {
 #ifdef LOG_COMPILER_MSVC
   return _ReturnAddress();
@@ -47,9 +51,9 @@ static void* logging_get_caller_address() {
 #pragma optimize("", on)
 #endif  // LOG_COMPILER_MSVC
 
-#if defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)
+#if (defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)) && !defined(LOG_COMPILER_CLANG)
 #pragma GCC pop_options
-#endif  // defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)
+#endif  // (defined(LOG_COMPILER_GCC) || defined(LOG_COMPILER_MINGW)) && !defined(LOG_COMPILER_CLANG)
 
 #endif  // LOG_USE_MODULEDEFINITION
 ////////////////  logging_get_caller_address  implementation end //////////////////
