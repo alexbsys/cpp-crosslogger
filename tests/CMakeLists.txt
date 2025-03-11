@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(logger_tests VERSION 0.0.1.1 LANGUAGES C CXX)
 
+cmake_policy(SET CMP0135 OLD)
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -29,9 +31,13 @@ set (HEADER_FILES
   logger_tests_log.h
   utils/cprintf.h
   utils/mem_checker.h
-)  
- 
+)
+
 include_directories("${CMAKE_CURRENT_LIST_DIR}/../include")
+
+if(NOT MSVC)
+  add_compile_options(-Wno-deprecated-declarations)
+endif()
 
 add_executable(logger_tests ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(logger_tests gtest_main logger_host)
