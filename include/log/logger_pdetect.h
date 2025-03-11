@@ -54,22 +54,27 @@
 // defined(linux)
 #endif  //! defined LOG_PLATFORM_UNIX && defined(LOG_PLATFORM_POSIX_BASED)
 
+// Apple platform
 #if defined(__APPLE__) && defined(__MACH__)
+#if !defined(LOG_PLATFORM_POSIX_BASED)
 #define LOG_PLATFORM_POSIX_BASED
+#endif //LOG_PLATFORM_POSIX_BASED
+
 #define LOG_PLATFORM_MAC
 
 #include <TargetConditionals.h>
 #if TARGET_IPHONE_SIMULATOR == 1
 #define LOG_PLATFORM_IPHONE
 #define LOG_PLATFORM_IPHONE_SIMULATOR
-#elif TARGET_OS_IPHONE == 1
+#elif TARGET_OS_IPHONE == 1 //TARGET_IPHONE_SIMULATOR
 #define LOG_PLATFORM_IPHONE
-#elif TARGET_OS_MAC == 1
+#elif TARGET_OS_MAC == 1    //TARGET_OS_IPHONE
 #define LOG_PLATFORM_MACOSX
-#endif
+#endif // TARGET_OS_MAC
 
 #endif  // defined(__APPLE__) && defined(__MACH__)
 
+// Sun based platforms
 #if defined(LOG_PLATFORM_POSIX_BASED) && \
     (defined(__sun__) || defined(__sun) || defined(__SunOS) || defined(sun))
 #define LOG_PLATFORM_POSIX_BASED
@@ -77,19 +82,39 @@
 #endif  // defined(LOG_PLATFORM_POSIX_BASED) && (defined(__sun__) || defined(__sun) ||
 // defined(__SunOS) || defined(sun))
 
+// Windows
 #ifdef _WIN32
+#if defined(LOG_PLATFORM_POSIX_BASED)
 #undef LOG_PLATFORM_POSIX_BASED  // it can be set if you use CYGWIN with GCC for Windows
+#endif //LOG_PLATFORM_POSIX_BASED
+
 // target
 #undef LOG_PLATFORM_CYGWIN
 #undef LOG_PLATFORM_UNIX
 
-#define LOG_PLATFORM_WINDOWS
+#define LOG_PLATFORM_WINDOWS 1
 #endif  //_WIN32
 
+// Android
 #if defined(__ANDROID__) && !defined(LOG_PLATFORM_ANDROID)
 #define LOG_PLATFORM_ANDROID  1
 #endif /*__ANDROID__*/
 
+// Detect MUSL
+#if defined(LOG_PLATFORM_POSIX_BASED)
+#ifndef _GNU_SOURCE
+#include <features.h>
+#ifndef __USE_GNU
+#define LOG_PLATFORM_MUSL 1
+#endif //_USE_GNU
+#undef _GNU_SOURCE
+#else //_GNU_SOURCE
+#include <features.h>
+#ifndef __USE_GNU
+#define LOG_PLATFORM_MUSL 1
+#endif //__USE_GNU
+#endif //_GNU_SOURCE
+#endif //LOG_PLATFORM_POSIX_BASED
 
 /* CPU detection section */
 

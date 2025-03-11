@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file  shared_ptr.hpp
  * @brief shared_ptr is a minimal implementation of smart pointer, a subset of the C++11 std::shared_ptr or boost::shared_ptr.
  *

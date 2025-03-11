@@ -133,7 +133,10 @@
   (logobj)->get_config_param(name, (buf),(size))
 
 #define LOGOBJ_FLUSH(logobj) \
-  (logobj)->flush()
+  (logobj)->flush(1)
+
+#define LOGOBJ_SHUTDOWN() (logging::_logger->release())
+
 
 #define LOGOBJ_GET_DEFAULT_LOGGER() (logging::_logger->get())
 

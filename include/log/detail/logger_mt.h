@@ -18,9 +18,9 @@
 #include <pthread.h>
 #endif /*LOG_HAVE_PTHREAD*/
 
-#ifdef LOG_PLATFORM_ANDROID
+#ifdef LOG_PLATFORM_POSIX_BASED
 #include <sched.h>
-#endif /*LOG_PLATFORM_ANDROID*/
+#endif /*LOG_PLATFORM_POSIX_BASED*/
 
 ////////// Portable atomic implementation
 
@@ -242,7 +242,7 @@ static void yield() {
 #if defined(LOG_PLATFORM_MAC)
   pthread_yield_np();
 #else /*LOG_PLATFORM_MAC*/
-  pthread_yield();
+  sched_yield();
 #endif /*LOG_PLATFORM_MAC*/
 #elif defined(LOG_CPP_X11)
   std::this_thread::yield();
