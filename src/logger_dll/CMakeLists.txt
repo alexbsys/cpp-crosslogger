@@ -4,14 +4,14 @@ cmake_minimum_required(VERSION 3.10)
 project(logger_dll VERSION 0.0.0.1 LANGUAGES C CXX)
 
 set (SOURCE_FILES
-  logger_dll_win.cpp
+  logger_dll_win.cc
   logger_dll.def
   "${CMAKE_CURRENT_SOURCE_DIR}/../logger_host/logger.cc"
 )
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}"
                     "${CMAKE_CURRENT_SOURCE_DIR}/../../include"
-					)
+)
 
 add_compile_definitions(LOGGERDLL_LIBRARY=1 LOG_THIS_IS_DLL=1 LOG_DLL_NAME="logger_dll")
 

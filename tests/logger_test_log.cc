@@ -91,8 +91,8 @@ TEST_F(logger_tests_log, check_verbose_filter_fatal_warning) {
   std::remove(kTestLogFileName.c_str());
 
   int verb_level = LOGGER_VERBOSE_FATAL | LOGGER_VERBOSE_WARNING;
-  char verb_level_str[24];
-  itoa(verb_level, verb_level_str, 10);
+  char verb_level_str[64];
+  sprintf(verb_level_str, "%d", verb_level);
 
   LOG_REGISTER_PLUGIN_FACTORY(new logging::logger_register_builtin_plugin_factory());
   LOG_SET_CONFIG_PARAM("logger::LoadPlugins", "builtin win_config_macro binary_cmd console_output file_output");
