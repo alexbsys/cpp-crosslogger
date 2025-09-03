@@ -36,7 +36,7 @@ void* _ReturnAddress(void);
 __attribute__ ((optnone))
 #endif //defined(LOG_COMPILER_CLANG
 
-static void* logging_get_caller_address() {
+LOG_INTERNAL_USED static void* logging_get_caller_address() {
 #ifdef LOG_COMPILER_MSVC
   return _ReturnAddress();
 #endif  // LOG_COMPILER_MSVC

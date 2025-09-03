@@ -14,7 +14,6 @@
 #endif /*LOG_USE_MODULEDEFINITION*/
 
 #if defined(LOG_PLATFORM_WINDOWS)
-#include <DbgHelp.h>
 
 #if defined(LOG_PLATFORM_64BIT)
 #define platform_dword_t DWORD64
@@ -39,7 +38,6 @@ class runtime_debugging {
 private:
   static std::string get_pdb_search_path(const std::string& config_sym_path) {
     const char* kPdbCurrDir = "\\pdb";
-    const int kPdbCurrDirLength = 5;  // length of buffer PdbCurrDir include terminate zero char
 
     char path_buffer[MAX_PATH];
     std::stringstream sym_search_path;
@@ -95,8 +93,11 @@ private:
       return "-deferred-";
     case SymSym:
       return "SYM";
-    default:
-      return str::stringformat("symtype=%ld", sym_type).c_str();
+    default: {
+      static std::string unknown_symtype;
+      unknown_symtype = str::stringformat("symtype=%ld", sym_type);
+      return unknown_symtype.c_str();
+    }
     }
   }
 
@@ -465,6 +466,9 @@ public:
 
   static _Unwind_Reason_Code sysunwind_unwind_callback(struct _Unwind_Context* context,
                                               void* arg) {
+
+    __android_log_write(ANDROID_LOG_INFO, "LOGGER", "UNWIND CALLBACK ");
+
     sysunwind_backtrace_state* state = (sysunwind_backtrace_state *)arg;
     uintptr_t pc = _Unwind_GetIP(context);
     if (pc) {

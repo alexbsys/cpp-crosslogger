@@ -67,7 +67,7 @@
 #ifdef __APPLE__
 #define LOG_SHARED 0
 #else //__APPLE__
-#define LOG_SHARED 0
+#define LOG_SHARED 1
 #endif //__APPLE__
 #endif  // LOG_SHARED
 
@@ -78,7 +78,7 @@
 
 /// Get logging module code from external DLL
 #ifndef LOG_USE_DLL
-#define LOG_USE_DLL 0
+#define LOG_USE_DLL 1
 #endif  // LOG_USE_DLL
 
 #ifndef LOG_MULTITHREADED
@@ -144,7 +144,7 @@
 /// LOG_UNHANDLED_EXCEPTIONS was set. Set this value to 0 can cause log file flush issues
 /// but may be useful if you using debugger AFTER crash
 #ifndef LOG_RELEASE_ON_APP_CRASH
-#define LOG_RELEASE_ON_APP_CRASH 1
+#define LOG_RELEASE_ON_APP_CRASH 0
 #endif  // LOG_RELEASE_ON_APP_CRASH
 
 /// Use modules cache for detect module name by address. Used only if

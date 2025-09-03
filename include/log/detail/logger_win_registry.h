@@ -82,7 +82,8 @@ struct log_registry_helper {
 
     // Enumerate the key values. 
     if (values_count) {
-      for (DWORD i = 0, ret = ERROR_SUCCESS; i<values_count; i++) {
+      ret = ERROR_SUCCESS;
+      for (DWORD i = 0; i<values_count; i++) {
         value_name_length = kMaxValueNameLength;
         value_name[0] = '\0';
         ret = RegEnumValueA(hkey, i,
@@ -139,7 +140,7 @@ struct log_registry_helper {
       std::string value;
       value.resize(bufSize);
 
-      DWORD size = static_cast<DWORD>(value.length()) + 1;
+      size = static_cast<DWORD>(value.length()) + 1;
       ret =
         RegQueryValueExA(hkey, valueName.c_str(), 0, &type, (BYTE*)value.data(), &size);
 

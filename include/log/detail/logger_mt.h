@@ -18,9 +18,9 @@
 #include <pthread.h>
 #endif /*LOG_HAVE_PTHREAD*/
 
-#ifdef LOG_PLATFORM_POSIX_BASED
+#ifdef LOG_PLATFORM_ANDROID
 #include <sched.h>
-#endif /*LOG_PLATFORM_POSIX_BASED*/
+#endif /*LOG_PLATFORM_ANDROID*/
 
 ////////// Portable atomic implementation
 
@@ -242,7 +242,7 @@ static void yield() {
 #if defined(LOG_PLATFORM_MAC)
   pthread_yield_np();
 #else /*LOG_PLATFORM_MAC*/
-  sched_yield();
+  pthread_yield();
 #endif /*LOG_PLATFORM_MAC*/
 #elif defined(LOG_CPP_X11)
   std::this_thread::yield();
@@ -265,7 +265,7 @@ static LOG_MT_THREAD_HANDLE_TYPE thread_start(LOG_MT_THREAD_FN_TYPE thread_fn, v
   return thread_handle;
 }
 
-static void thread_join(LOG_MT_THREAD_HANDLE_TYPE* handle) {
+LOG_INTERNAL_USED static void thread_join(LOG_MT_THREAD_HANDLE_TYPE* handle) {
 #ifdef LOG_PLATFORM_WINDOWS
   WaitForSingleObject(*handle, INFINITE);
 #else   // LOG_PLATFORM_WINDOWS
@@ -273,7 +273,7 @@ static void thread_join(LOG_MT_THREAD_HANDLE_TYPE* handle) {
 #endif  // LOG_PLATFORM_WINDOWS
 }
 
-static uint64_t thread_get_current_id() {
+LOG_INTERNAL_USED static uint64_t thread_get_current_id() {
 #ifdef LOG_PLATFORM_WINDOWS
   return static_cast<uint64_t>(GetCurrentThreadId());
 #else   // LOG_PLATFORM_WINDOWS
@@ -281,7 +281,7 @@ static uint64_t thread_get_current_id() {
 #endif  // LOG_PLATFORM_WINDOWS
 }
 
-static uint64_t thread_get_id(LOG_MT_THREAD_HANDLE_TYPE* handle) {
+LOG_INTERNAL_USED static uint64_t thread_get_id(LOG_MT_THREAD_HANDLE_TYPE* handle) {
 #ifdef LOG_PLATFORM_WINDOWS
   return GetThreadId(*handle);
 #else   // LOG_PLATFORM_WINDOWS
@@ -289,8 +289,7 @@ static uint64_t thread_get_id(LOG_MT_THREAD_HANDLE_TYPE* handle) {
 #endif  // LOG_PLATFORM_WINDOWS
 }
 
-
-static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mutex_locked, int wait_ms) {
+LOG_INTERNAL_USED static bool wait_event(LOG_MT_EVENT_TYPE* evt, LOG_MT_MUTEX* mutex, bool is_mutex_locked, int wait_ms) {
 #ifdef LOG_PLATFORM_WINDOWS
   if (is_mutex_locked) {
     LOG_MT_MUTEX_UNLOCK(mutex);

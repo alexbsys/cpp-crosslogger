@@ -17,7 +17,7 @@
 namespace logging {
 namespace detail {
 namespace str {
-  static void format_arguments_list(std::string& result_str, const char* format,
+  LOG_INTERNAL_USED static void format_arguments_list(std::string& result_str, const char* format,
     va_list arguments) {
     static const int kStartBufferSize = 512;
     static const int kBufferSizeIncrementBytes = 512;
@@ -72,7 +72,7 @@ namespace str {
   /** 
    * \brief    stringformat function. vsprintf analog for std::string
    */
-  static std::string stringformat(const char* format, ...) {
+  LOG_INTERNAL_USED static std::string stringformat(const char* format, ...) {
     using namespace detail::str;
 
     va_list arguments;
@@ -83,19 +83,19 @@ namespace str {
     return result;
   }
 
-  static bool contains(const char* str, const char* find_str) {
+  LOG_INTERNAL_USED static bool contains(const char* str, const char* find_str) {
     return strstr(str, find_str) != NULL;
   }
 
-  static bool compare(const char* str1, const char* str2) {
+  LOG_INTERNAL_USED static bool compare(const char* str1, const char* str2) {
     return strcmp(str1, str2) == 0;
   }
 
-  static bool starts_with(const std::string& str, const std::string& what) {
+  LOG_INTERNAL_USED static bool starts_with(const std::string& str, const std::string& what) {
     return str.substr(0, what.length()) == what;
   }
   
-  static std::string& replace(std::string& str, const char* find_str,
+  LOG_INTERNAL_USED static std::string& replace(std::string& str, const char* find_str,
     const std::string& replaceStr) {
     size_t i = 0;
     const char* ptr = NULL;
@@ -109,7 +109,7 @@ namespace str {
     return str;
   }
 
-  static void split(std::string str, std::vector<std::string>& out_strings, char ch = ' ') {
+  LOG_INTERNAL_USED static void split(std::string str, std::vector<std::string>& out_strings, char ch = ' ') {
     while (true) {
       size_t position = str.find_first_of(ch);
       std::string current = str.substr(0, position);
@@ -126,17 +126,17 @@ namespace str {
     }
   }
 
-  static std::string tolower(const std::string& str) {
+  LOG_INTERNAL_USED static std::string tolower(const std::string& str) {
     std::string result = str;
-    for (size_t i = 0; i < result.size(); i++) result[i] = ::tolower(result[i]);
+    for (size_t i = 0; i < result.size(); i++) result[i] = static_cast<char>(::tolower(result[i]));
     return result;
   }
   
-  static std::string trimr(std::string str, char delim = ' ') {
+  LOG_INTERNAL_USED static std::string trimr(std::string str, char delim = ' ') {
     return str.erase(str.find_last_not_of(delim) + 1);
   }
 
-  static std::string triml(std::string str, char delim = ' ') {
+  LOG_INTERNAL_USED static std::string triml(std::string str, char delim = ' ') {
     return str.erase(0, str.find_first_not_of(delim));
   }
 }//namespace str

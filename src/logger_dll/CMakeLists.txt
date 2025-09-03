@@ -17,8 +17,8 @@ add_compile_definitions(LOGGERDLL_LIBRARY=1 LOG_THIS_IS_DLL=1 LOG_DLL_NAME="logg
 
 if(MSVC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEF:${CMAKE_CURRENT_SOURCE_DIR}\\logger_dll.def")
-  add_compile_options(/wd4250 /wd4437 /wd5045 /wd4548 /wd4710 /wd4711 /wd4371 /wd4996 /MT /Zi)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /MT /Zi")
+#  add_compile_options(/wd4250 /wd4437 /wd5045 /wd4548 /wd4710 /wd4711 /wd4371 /wd4996 /MT /Zi)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT /Zi")
 endif()
 
 add_library(logger_dll SHARED ${SOURCE_FILES})

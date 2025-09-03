@@ -18,6 +18,7 @@
 #pragma warning(disable : 4996)
 #endif  // LOG_COMPILER_MSVC
 
+#include <stdio.h>
 #include <string>
 #include <sstream>
 #include <ostream>
@@ -27,7 +28,6 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
-#include <cstdio>
 #include <ctime>
 #include <cinttypes>
 #include <cstdint>
@@ -56,7 +56,6 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
-
 #else  // LOGGER_PLATFORM_WINDOWS
 
 #ifdef LOG_HAVE_UNISTD_H
@@ -127,21 +126,20 @@
 
 #if !defined(LOG_PLATFORM_WINDOWS) && LOG_AUTO_DEBUGGING
 #include <cxxabi.h>
-
-// Android and MUSL do not provide GLIBC backtrace
-#if !defined(LOG_PLATFORM_MUSL) && !defined(LOG_PLATFORM_ANDROID)
-#define LOG_USE_GLIBCBACKTRACE
-#else /*!LOG_PLATFORM_MUSL && !LOG_PLATFORM_ANDROID*/
-#define LOG_USE_SYSUNWIND
-#endif /*!LOG_PLATFORM_MUSL && !LOG_PLATFORM_ANDROID*/
+#  if !defined(LOG_PLATFORM_ANDROID)
+#    define LOG_USE_GLIBCBACKTRACE
+#  else /*LOG_PLATFORM_ANDROID*/
+#    define LOG_USE_SYSUNWIND
+#  endif /*LOG_PLATFORM_ANDROID*/
 #endif  //! defined(LOG_PLATFORM_WINDOWS) && LOG_AUTO_DEBUGGING
 
+
 #if defined(LOG_USE_GLIBCBACKTRACE)
-#include <execinfo.h>
+#    include <execinfo.h>
 #endif /*LOG_USE_GLIBCBACKTRACE*/
 
 #if defined(LOG_USE_SYSUNWIND)
-#include <unwind.h>
+#    include <unwind.h>
 #endif /*LOG_USE_SYSUNWIND*/
 
 #if !defined(LOG_PLATFORM_WINDOWS) && LOG_UNHANDLED_EXCEPTIONS
@@ -153,6 +151,8 @@
 #include <signal.h>
 #include <ucontext.h>
 #endif  //! defined(LOG_PLATFORM_WINDOWS) && LOG_UNHANDLED_EXCEPTIONS
+
+//#endif /*defined(LOG_CPP) && (!LOG_USE_DLL || defined(LOG_THIS_IS_DLL))*/
 
 ////////////////////////////// Includes and libs END //////////////////////////////
 

@@ -15,6 +15,7 @@
 #include "logger_colored_console_output_plugin.h"
 #include "logger_win_config_macro_plugin.h"
 
+
 #if LOG_AUTO_DEBUGGING
 #include "logger_crashhandler_command_plugin.h"
 #endif /*LOG_AUTO_DEBUGGING*/
@@ -57,6 +58,7 @@ public:
 #ifdef LOG_PLATFORM_WINDOWS
     plugin_factories_.push_back(new logger_win_registry_config_plugin_factory());
 #endif /*LOG_PLATFORM_WINDOWS*/
+
   }
 
   virtual ~logger_register_builtin_plugin() LOG_METHOD_OVERRIDE {

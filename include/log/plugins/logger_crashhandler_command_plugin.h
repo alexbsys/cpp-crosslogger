@@ -218,11 +218,11 @@ class unhandled_exceptions_processor {
 
     if (exit_on_crash) {
       if (show_message_on_crash) {
-        FatalAppExitA(-1, message.c_str());
+        FatalAppExitA(static_cast<UINT>(-1), message.c_str());
         return -1;
       }
       else {
-        ExitProcess(-1);
+        ExitProcess(static_cast<UINT>(-1));
       }
     }
 

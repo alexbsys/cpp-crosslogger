@@ -6,8 +6,6 @@
 #include "logger_pdetect.h"
 #include "logger_pdefs.h"
 
-#if defined (LOG_ENABLED) && LOG_ENABLED>0
-
 // Logger verbose level declaration both for C++ and C code. 
 // For C++ enum logger_verbose_level is in 'logging' namespace.
 // For pure C it is just enum
@@ -70,6 +68,7 @@ namespace logging {
 
 
 
-#endif //LOG_ENABLED
+
+
 
 #endif /*LOGGER_VERBOSE_HEADER*/

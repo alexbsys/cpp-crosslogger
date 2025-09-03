@@ -479,7 +479,7 @@ static std::string get_current_user_sid() {
     DWORD len = 0;
     if (!GetTokenInformation(token_handle, TokenUser, 0, 0, &len)) break;
 
-    TOKEN_USER* user_obj = reinterpret_cast<TOKEN_USER*>(malloc(len));
+    user_obj = reinterpret_cast<TOKEN_USER*>(malloc(len));
     if (!user_obj) break;
 
     if (!GetTokenInformation(token_handle, TokenUser, user_obj, len, &len))

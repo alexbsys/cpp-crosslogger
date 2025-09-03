@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <log/logger_cfg.h>
+#include <log/logger_pdetect.h>
 
 namespace logging {
 namespace detail {
@@ -59,7 +60,7 @@ namespace cfg {
     params.push_back(keyval);
   }
 
-  static bool has_value(
+  LOG_INTERNAL_USED static bool has_value(
     const KeyValueTypeList& params,
     const std::string& param_name) {
 
@@ -71,7 +72,7 @@ namespace cfg {
     return false;
   }
 
-  static size_t values_count(
+  LOG_INTERNAL_USED static size_t values_count(
     const KeyValueTypeList& params,
     const std::string& param_name) {
     size_t count = 0;

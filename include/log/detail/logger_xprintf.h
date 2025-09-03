@@ -25,6 +25,7 @@ xprintf("%lld", 1234567812345678LL); "1234567812345678"
 #include <log/logger_pdefs.h>
 #include <log/logger_varargs.h>
 #include <math.h>
+#include <stdint.h>
 
 /** Support for %lld  */
 #define LOG_OWN_VSNPRINTF_INT64_SUPPORT   1
@@ -38,8 +39,10 @@ namespace str {
 static int xputc(char** outptr, char c) {
   int length = 0;
 
-  if (LOG_OWN_VSNPRINTF_CR_CRLF && c == '\n')
-	length += xputc(outptr, '\r');  /* CR -> CRLF */
+#if LOG_OWN_VSNPRINTF_CR_CRLF
+  if (c == '\n')
+    length += xputc(outptr, '\r');  /* CR -> CRLF */
+#endif //LOG_OWN_VSNPRINTF_CR_CRLF
 
   if (outptr) {
     *(*outptr) = (unsigned char)c;
@@ -263,16 +266,21 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 			break;
     case 'P':         /* Pointer */
       f |= kLongFlag;
-      if (sizeof(int) == 8)
-        f |= kValue64BitFlag;
+
+#if INTPTR_MAX == INT64_MAX
+      f |= kValue64BitFlag;
+#endif //INTPTR_MAX == INT64_MAX
 
       r = 16;
       break;
 #if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
     case 'F':
       f |= kFloatFlag;
-      if (sizeof(double) == 8)
-        f |= kValue64BitFlag;
+
+#if INTPTR_MAX == INT64_MAX
+      f |= kValue64BitFlag;
+#endif //INTPTR_MAX == INT64_MAX
+
       r=10;
       break;
 #endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
@@ -407,7 +415,7 @@ static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
 	return length;
 }
 
-static int LOG_CDECL xsnprintf(char* buff, int chars_count, const char* fmt, ...) {
+LOG_INTERNAL_USED static int LOG_CDECL xsnprintf(char* buff, int chars_count, const char* fmt, ...) {
   char* buff_ptr = buff;
   int length;
 
