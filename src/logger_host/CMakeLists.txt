@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-project(logger_Host VERSION 0.0.0.1 LANGUAGES C CXX)
+project(logger_host VERSION 0.0.0.1 LANGUAGES C CXX)
 
 set (SOURCE_FILES
   logger_load_dll.c
@@ -57,17 +57,27 @@ set (LOGGER_LIB_HEADER_FILES
   "${CMAKE_CURRENT_LIST_DIR}/../../include/log/plugins/logger_win_config_macro_plugin.h"
   "${CMAKE_CURRENT_LIST_DIR}/../../include/log/plugins/logger_win_registry_config_plugin.h"
 )
-  
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/../../include" )
-
-add_compile_definitions(LOG_USE_DLL=1 LOG_DLL_NAME="logger_dll.dll")
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /MT /Zi")
-  add_compile_options(/wd4250 /wd4437 /wd5045 /wd4548 /wd4710 /wd4711 /wd4371 /wd4996 /MT /Zi)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT /Zi")
+#  add_compile_options(/wd4250 /wd4437 /wd5045 /wd4548 /wd4710 /wd4711 /wd4371 /wd4996 /MT /Zi)
 endif()
 
 add_library(logger_host STATIC ${SOURCE_FILES} ${LOGGER_LIB_HEADER_FILES})
+  
+target_include_directories(logger_host PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+)
+					
+target_include_directories(logger_host PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+				
+target_compile_definitions(logger_host PUBLIC 
+  LOG_USE_DLL=1 
+  $<$<PLATFORM_ID:Windows>:LOG_DLL_NAME="logger_dll.dll">
+  $<$<PLATFORM_ID:Linux>:LOG_DLL_NAME="logger_dll.so">
+  $<$<PLATFORM_ID:Darwin>:LOG_DLL_NAME="logger_dll.dylib">
+)
 
 install(TARGETS logger_host DESTINATION "${PROJECT_OUTPUT_DIR}")
