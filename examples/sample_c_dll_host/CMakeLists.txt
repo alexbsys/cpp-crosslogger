@@ -10,5 +10,5 @@ add_compile_definitions(LOG_USE_DLL=0 LOG_THIS_IS_DLL=0)
 
 
 target_link_libraries(sample_c_dll_host PUBLIC 
-  logger_interface
+  logger_host
 )

@@ -10,6 +10,8 @@
 #include "logger_pdefs.h"
 #include "logger_varargs.h"
 
+#include <stddef.h>
+
 #ifdef LOG_CPP
 extern "C" {
 #endif /*LOG_CPP*/
