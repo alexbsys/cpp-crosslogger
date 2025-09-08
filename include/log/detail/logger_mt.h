@@ -18,7 +18,14 @@
 #include <pthread.h>
 #endif /*LOG_HAVE_PTHREAD*/
 
-#ifdef LOG_PLATFORM_ANDROID
+
+#if defined(_POSIX_PRIORITY_SCHEDULING) && _POSIX_PRIORITY_SCHEDULING > 0
+#define LOG_HAS_SCHED_YIELD 1
+#else
+#define LOG_HAS_SCHED_YIELD 0
+#endif
+
+#if defined(LOG_PLATFORM_ANDROID) || (HAS_SCHED_YIELD>0)
 #include <sched.h>
 #endif /*LOG_PLATFORM_ANDROID*/
 
@@ -236,7 +243,7 @@ static void fire_event(LOG_MT_EVENT_TYPE* evt) {
 static void yield() {
 #if defined(LOG_PLATFORM_WINDOWS)
   Sleep(0);
-#elif defined(LOG_PLATFORM_ANDROID)
+#elif defined(LOG_PLATFORM_ANDROID) || (LOG_HAS_SCHED_YIELD>0)
   sched_yield();
 #elif defined(LOG_HAVE_PTHREAD)
 #if defined(LOG_PLATFORM_MAC)

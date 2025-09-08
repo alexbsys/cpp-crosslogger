@@ -10,6 +10,11 @@
 #define LOG_RTTI_ENABLED 0
 #define LOG_SHARED 0
 #define LOG_COMPILER_WARNINGS 0
+
+#ifdef LOG_USE_DLL
+#undef LOG_USE_DLL
+#endif //LOG_USE_DLL
+
 #define LOG_USE_DLL 0
 #define LOG_MULTITHREADED 0
 #define LOG_CHECKED 1
