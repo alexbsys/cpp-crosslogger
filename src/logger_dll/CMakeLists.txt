@@ -27,5 +27,7 @@ if(MSVC)
   SET_TARGET_PROPERTIES(logger_dll PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}\\logger_dll.def")
 endif()
 
+set_target_properties(logger_dll PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 set_source_files_properties(logger_dll.def PROPERTIES HEADER_FILE_ONLY TRUE)
 install(TARGETS logger_dll DESTINATION "${PROJECT_OUTPUT_DIR}")

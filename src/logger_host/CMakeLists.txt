@@ -60,7 +60,6 @@ set (LOGGER_LIB_HEADER_FILES
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT /Zi")
-#  add_compile_options(/wd4250 /wd4437 /wd5045 /wd4548 /wd4710 /wd4711 /wd4371 /wd4996 /MT /Zi)
 endif()
 
 add_library(logger_host STATIC ${SOURCE_FILES} ${LOGGER_LIB_HEADER_FILES})
@@ -68,16 +67,18 @@ add_library(logger_host STATIC ${SOURCE_FILES} ${LOGGER_LIB_HEADER_FILES})
 target_include_directories(logger_host PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
-					
+
 target_include_directories(logger_host PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
-				
+
 target_compile_definitions(logger_host PRIVATE 
   LOG_USE_DLL=1 
   $<$<PLATFORM_ID:Windows>:LOG_DLL_NAME="logger_dll.dll">
   $<$<PLATFORM_ID:Linux>:LOG_DLL_NAME="logger_dll.so">
   $<$<PLATFORM_ID:Darwin>:LOG_DLL_NAME="logger_dll.dylib">
 )
+
+set_target_properties(logger_host PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 install(TARGETS logger_host DESTINATION "${PROJECT_OUTPUT_DIR}")
