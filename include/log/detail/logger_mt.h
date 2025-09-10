@@ -25,7 +25,7 @@
 #define LOG_HAS_SCHED_YIELD 0
 #endif
 
-#if defined(LOG_PLATFORM_ANDROID) || (HAS_SCHED_YIELD>0)
+#if defined(LOG_PLATFORM_ANDROID) || (HAS_SCHED_YIELD>0) || defined(LOG_PLATFORM_MUSL)
 #include <sched.h>
 #endif /*LOG_PLATFORM_ANDROID*/
 
@@ -243,7 +243,7 @@ static void fire_event(LOG_MT_EVENT_TYPE* evt) {
 static void yield() {
 #if defined(LOG_PLATFORM_WINDOWS)
   Sleep(0);
-#elif defined(LOG_PLATFORM_ANDROID) || (LOG_HAS_SCHED_YIELD>0)
+#elif defined(LOG_PLATFORM_ANDROID) || (LOG_HAS_SCHED_YIELD>0) || defined(LOG_PLATFORM_MUSL)
   sched_yield();
 #elif defined(LOG_HAVE_PTHREAD)
 #if defined(LOG_PLATFORM_MAC)
