@@ -40,7 +40,6 @@
   \author alexb@clever.team
 */
 
-
 #ifndef PDETECT_HEADER
 #define PDETECT_HEADER
 
@@ -341,11 +340,11 @@
 #    define PDETECT_PLATFORM_IPHONE_SIMULATOR
 #    define PDETECT_PLATFORM_TARGETOS_NAME "ios"
 #    define PDETECT_PLATFORM_TARGETOS  PDETECT_PLATFORM_OSCODE_IOS
-#  elif defined(TARGET_OS_IPHONE) && ((TARGET_OS_IPHONE == 1) || defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__))
+#  elif (TARGET_OS_IPHONE == 1) || defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
 #    define PDETECT_PLATFORM_IPHONE
 #    define PDETECT_PLATFORM_TARGETOS_NAME "ios"
 #    define PDETECT_PLATFORM_TARGETOS  PDETECT_PLATFORM_OSCODE_IOS
-#  elif defined(TARGET_OS_MAC) && (TARGET_OS_MAC == 1)
+#  elif TARGET_OS_MAC == 1
 #    define PDETECT_PLATFORM_MACOS
 #    define PDETECT_PLATFORM_TARGETOS_NAME "macos"
 #    define PDETECT_PLATFORM_TARGETOS  PDETECT_PLATFORM_OSCODE_MACOS
@@ -478,6 +477,22 @@
 #  define PDETECT_PLATFORM_SPEC_NAME "asmjs"
 #endif /*defined(__asmjs__) && defined(__asmjs)*/
 
+/* MUSL */
+#if defined(PDETECT_PLATFORM_POSIX_BASED)
+#ifndef _GNU_SOURCE
+#include <features.h>
+#ifndef __USE_GNU
+#define PDETECT_PLATFORM_MUSL 1
+#endif //_USE_GNU
+#undef _GNU_SOURCE
+#else //_GNU_SOURCE
+#include <features.h>
+#ifndef __USE_GNU
+#define PDETECT_PLATFORM_MUSL 1
+#endif //__USE_GNU
+#endif //_GNU_SOURCE
+#endif //PDETECT_PLATFORM_POSIX_BASED
+
 /* Unknown platform */
 #if !defined(PDETECT_PLATFORM_TARGETOS)
 #  define PDETECT_PLATFORM_TARGETOS   PDETECT_PLATFORM_OSCODE_UNKNOWN
@@ -501,6 +516,15 @@
 #  pragma message "Detected platform target OS: '" PDETECT_PLATFORM_TARGETOS_NAME "', code " PDETECT_XSTR(PDETECT_PLATFORM_TARGETOS)
 #endif /*PDETECT_CONFIG_VERBOSE>=1*/
 
+/****** FUNC_INTERNAL_USED macro declaration ******/
+
+#if defined(__GNUC__) || defined(__clang__)
+#define FUNC_INTERNAL_USED __attribute__((used))
+#elif defined(_MSC_VER)
+#define FUNC_INTERNAL_USED __pragma(warning(suppress: 4505 4514))
+#else
+#define FUNC_INTERNAL_USED
+#endif
 
 /****** CPU detection section ******/
 
@@ -508,7 +532,7 @@
    Macros PDETECT_CPU_IS_BIG_ENDIAN() and PDETECT_CPU_IS_LITTLE_ENDIAN() can be used only in runtime 
  */
 #if PDETECT_CONFIG_CPU_ENDIAN_DETECTION
-static int PDETECT_IsBigEndian() { int i=1; return ! *((char*)&i); }
+FUNC_INTERNAL_USED static int PDETECT_IsBigEndian() { int i=1; return ! *((char*)&i); }
 #  define PDETECT_CPU_IS_BIG_ENDIAN() (PDETECT_IsBigEndian())
 #  define PDETECT_CPU_IS_LITTLE_ENDIAN() (!PDETECT_IsBigEndian())
 #endif /*PDETECT_CONFIG_CPU_ENDIAN_DETECTION*/
@@ -1192,10 +1216,6 @@ static int PDETECT_IsBigEndian() { int i=1; return ! *((char*)&i); }
 
 
 #endif /*PDETECT_CPP*/
-
-
-
-
 
 #if (!defined(PDETECT_PLATFORM_WINDOWS) && !defined(PDETECT_PLATFORM_POSIX_BASED) && !defined(PDETECT_PLATFORM_APPLE)) || \
     (defined(PDETECT_PLATFORM_WINDOWS) && defined(PDETECT_PLATFORM_POSIX_BASED))

@@ -6,7 +6,7 @@
 #include <crtdbg.h>
 #else // PDETECT_PLATFORM_WINDOWS
 
-#ifndef PDETECT_PLATFORM_APPLE
+#if !defined(PDETECT_PLATFORM_APPLE)
 #include <malloc.h>
 #else //PDETECT_PLATFORM_APPLE
 #include <malloc/malloc.h>
@@ -30,11 +30,11 @@ MemChecker::MemChecker() {
   _CrtMemCheckpoint(&mem_state_);
 #else // PDETECT_PLATFORM_WINDOWS
 
-#ifndef PDETECT_PLATFORM_APPLE
+#if !defined(PDETECT_PLATFORM_APPLE) && !defined(PDETECT_PLATFORM_MUSL)
   struct mallinfo mi;
   mi = mallinfo();
   total_allocated_mem_ = mi.uordblks;
-#else //PDETECT_PLATFORM_APPLE
+#elif defined(PDETECT_PLATFORM_APPLE)
   struct mstats ms = mstats();
   total_allocated_mem_ = ms.bytes_used;
 #endif //PDETECT_PLATFORM_APPLE
@@ -55,11 +55,11 @@ int64_t MemChecker::GetCurrentUsage() const {
   return static_cast<int64_t>(state_diff.lSizes[1]);
 #else // PDETECT_PLATFORM_WINDOWS
 
-#ifndef PDETECT_PLATFORM_APPLE
+#if !defined(PDETECT_PLATFORM_APPLE) && !defined(PDETECT_PLATFORM_MUSL)
   struct mallinfo mi;
   mi = mallinfo();
   return static_cast<int64_t>(mi.uordblks) - total_allocated_mem_;
-#else //PDETECT_PLATFORM_APPLE
+#elif defined(PDETECT_PLATFORM_APPLE)
   struct mstats ms = mstats();
   return static_cast<int64_t>(ms.bytes_used) - total_allocated_mem_;
 #endif //PDETECT_PLATFORM_APPLE
@@ -79,12 +79,12 @@ MemChecker::~MemChecker() {
   allocated_mem = static_cast<int64_t>(state_diff.lSizes[1]);
 #else // PDETECT_PLATFORM_WINDOWS
 
-#ifndef PDETECT_PLATFORM_APPLE
+#if !defined(PDETECT_PLATFORM_APPLE) && !defined(PDETECT_PLATFORM_MUSL)
   struct mallinfo mi;
   mi = mallinfo();
   allocated_mem = static_cast<int64_t>(mi.uordblks) - total_allocated_mem_;
   diff_result = allocated_mem != total_allocated_mem_;
-#else //PDETECT_PLATFORM_APPLE
+#elif defined(PDETECT_PLATFORM_APPLE)
   struct mstats ms = mstats();
   allocated_mem = static_cast<int64_t>(ms.bytes_used) - total_allocated_mem_;
   diff_result = allocated_mem != total_allocated_mem_;
