@@ -1,22 +1,24 @@
 
-// Formatted string output 
-/*  xprintf("%d", 1234);			"1234"
-xprintf("%6d,%3d%%", -200, 5);	"  -200,  5%"
-xprintf("%-6u", 100);			"100   "
-xprintf("%ld", 12345678L);		"12345678"
-xprintf("%04x", 0xA3);			"00a3"
-xprintf("%08LX", 0x123ABC);		"00123ABC"
-xprintf("%016b", 0x550F);		"0101010100001111"
-xprintf("%s", "String");		"String"
-xprintf("%-4s", "abc");			"abc "
-xprintf("%4s", "abc");			" abc"
-xprintf("%c", 'a');				"a"
-xprintf("%f", 10.0);            <xprintf lacks floating point support>
+/* Formatted string output 
+   xprintf("%d", 1234);             "1234"
+   xprintf("%6d,%3d%%", -200, 5);   "  -200,  5%"
+   xprintf("%-6u", 100);            "100   "
+   xprintf("%ld", 12345678L);       "12345678"
+   xprintf("%04x", 0xA3);           "00a3"
+   xprintf("%08LX", 0x123ABC);      "00123ABC"
+   xprintf("%016b", 0x550F);        "0101010100001111"
+   xprintf("%s", "String");         "String"
+   xprintf("%-4s", "abc");          "abc "
+   xprintf("%4s", "abc");           " abc"
+   xprintf("%c", 'a');              "a"
+   xprintf("%f", 10.0);             "10.00000000"
+   xprintf("%.2f", 10.0);           "10.00"
+   xprintf("%zu", sizeof(int));     "4" (size_t support)
+   xprintf("%.*s", 3, "Hello");     "Hel" (precision for strings)
 
-when int64 supported
-xprintf("%lld", 1234567812345678LL); "1234567812345678"
+   When int64 supported:
+   xprintf("%lld", 1234567812345678LL); "1234567812345678"
 */
-
 
 #ifndef LOGGER_XPRINTF_HEADER
 #define LOGGER_XPRINTF_HEADER
@@ -26,8 +28,9 @@ xprintf("%lld", 1234567812345678LL); "1234567812345678"
 #include <log/logger_varargs.h>
 #include <math.h>
 #include <stdint.h>
+#include <stddef.h>
 
-/** Support for %lld  */
+/* Support for %lld */
 #define LOG_OWN_VSNPRINTF_INT64_SUPPORT   1
 #define LOG_OWN_VSNPRINTF_FLOAT_SUPPORT   1
 
@@ -35,17 +38,17 @@ namespace logging {
 namespace detail {
 namespace str {
 
-// Put a character to buffer
-static int xputc(char** outptr, char c) {
+/* Put a character to buffer */
+static int xputc(char** outptr, char ch) {
   int length = 0;
 
 #if LOG_OWN_VSNPRINTF_CR_CRLF
-  if (c == '\n')
+  if (ch == '\n')
     length += xputc(outptr, '\r');  /* CR -> CRLF */
-#endif //LOG_OWN_VSNPRINTF_CR_CRLF
+#endif /* LOG_OWN_VSNPRINTF_CR_CRLF */
 
   if (outptr) {
-    *(*outptr) = (unsigned char)c;
+    *(*outptr) = (unsigned char)ch;
     (*outptr)++;
     ++length;
   }
@@ -53,366 +56,546 @@ static int xputc(char** outptr, char c) {
   return length;
 }
 
-// Put a null-terminated string helper
-static int xputs_helper(char** outptr,
-	const char* str, int max_chars, int current_length) {
+/* Put a null-terminated string helper with optional max_len limit */
+static int xputs_helper_n(char** outptr,
+    const char* str, int max_chars, int current_length, int max_str_len) {
   const int max_chars_produced_by_xputc = LOG_OWN_VSNPRINTF_CR_CRLF ? 2 : 1;
   int length = 0;
+  int chars_written = 0;
 
   while (*str) {
+    /* Check output buffer limit */
     if (current_length + max_chars_produced_by_xputc + length >= max_chars)
       return -1;
+    
+    /* Check string length limit (for %.*s) */
+    if (max_str_len >= 0 && chars_written >= max_str_len)
+      break;
 
     length += xputc(outptr, *str++);
+    chars_written++;
   }
 
   return length;
 }
 
-static int xputws_helper(char** outptr,
-    const wchar_t* str, int max_chars, int current_length) {
+/* Put a null-terminated string helper (no length limit) */
+static int xputs_helper(char** outptr,
+    const char* str, int max_chars, int current_length) {
+  return xputs_helper_n(outptr, str, max_chars, current_length, -1);
+}
+
+/* Put a null-terminated wide string helper with optional max_len limit */
+static int xputws_helper_n(char** outptr,
+    const wchar_t* str, int max_chars, int current_length, int max_str_len) {
   const int max_chars_produced_by_xputc = LOG_OWN_VSNPRINTF_CR_CRLF ? 2 : 1;
   int length = 0;
+  int chars_written = 0;
 
   while (*str) {
+    /* Check output buffer limit */
     if (current_length + max_chars_produced_by_xputc + length >= max_chars)
       return -1;
+    
+    /* Check string length limit (for %.*s) */
+    if (max_str_len >= 0 && chars_written >= max_str_len)
+      break;
 
     wchar_t wch = *str++;
     char ch = (char)wch;
     length += xputc(outptr, ch);
+    chars_written++;
   }
 
   return length;
 }
 
+/* Put a null-terminated wide string helper (no length limit) */
+static int xputws_helper(char** outptr,
+    const wchar_t* str, int max_chars, int current_length) {
+  return xputws_helper_n(outptr, str, max_chars, current_length, -1);
+}
+
 
 /**
- * \brief    Printf to buffer used varargs
- * \param    outptr     Pointer to pointer to output buffer
- * \param    out_chars_count    Output buffer size in bytes
- * \param    fmt        Pointer to the format string
- * \param    arp        varargs list
- * \return   length in bytes
+ * \brief    Printf to buffer using varargs
+ * \param    outptr          Pointer to pointer to output buffer
+ * \param    out_chars_count Output buffer size in bytes
+ * \param    fmt             Pointer to the format string
+ * \param    arp             varargs list
+ * \return   length in bytes, or -1 on buffer overflow
+ * 
+ * Supported format specifiers:
+ *   %d, %i  - signed decimal int
+ *   %u      - unsigned decimal int
+ *   %x, %X  - hexadecimal (lowercase/uppercase)
+ *   %o      - octal
+ *   %b      - binary
+ *   %c      - character
+ *   %s      - string
+ *   %ws, %Ws - wide string
+ *   %p      - pointer
+ *   %f      - float/double
+ *   %%      - literal %
+ * 
+ * Modifiers:
+ *   l       - long (32-bit)
+ *   ll, L   - long long (64-bit)
+ *   z       - size_t (platform-dependent)
+ * 
+ * Flags:
+ *   -       - left justify
+ *   0       - zero padding
+ *   [width] - minimum field width
+ *   .[prec] - precision (for floats: decimal places, for strings: max chars)
+ *   .*      - precision from argument
  */
-static int LOG_CDECL xbuff_printf_args(char** outptr,  int out_chars_count,
-	const char* fmt, /* Pointer to the format string */
-	va_list arp) {
+static int LOG_CDECL xbuff_printf_args(char** outptr, int out_chars_count,
+    const char* fmt,
+    va_list arp) {
+  
+  /* Format flags */
   const unsigned int kZeroPadded = 1;
   const unsigned int kLeftJustified = 2;
-  const unsigned int kSignFlag = 8;
   const unsigned int kLongFlag = 4;
+  const unsigned int kSignFlag = 8;
   const unsigned int kFloatFlag = 16;
   const unsigned int kPrecisionPadded = 32;
   const unsigned int kValue64BitFlag = 64;
+  const unsigned int kSizeTFlag = 128;      /* size_t modifier (z) */
+  const unsigned int kPrecisionFromArg = 256; /* precision from argument (*) */
   
-  unsigned int r = 10, i, j, w, f;
-  unsigned long v = 0;
+  unsigned int flags = 0;
+  unsigned int radix = 0;
+  unsigned int buf_idx = 0;
+  unsigned int pad_len = 0;
+  unsigned int width = 0;
+  unsigned long value = 0;
 
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-  unsigned long long v64 = 0;
-#endif /*LOG_OWN_VSNPRINTF_INT64_SUPPORT*/
+  unsigned long long value64 = 0;
+#endif /* LOG_OWN_VSNPRINTF_INT64_SUPPORT */
 
-  char s[32], c, d, *p;
+  char num_buf[32];
+  char ch, digit;
+  char* str_ptr;
   int length = 0;
 
 #if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-  int prec = 8;           // precision
-  unsigned long vp = 0;   // value after point
-#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+  int precision = 8;          /* default precision for floats */
+  unsigned long frac_value = 0;  /* fractional part value */
+#endif /* LOG_OWN_VSNPRINTF_FLOAT_SUPPORT */
 
-  // how many chars can be produced by xputc function
-  // When \n->\r\n replace is enabled, xputc can produce 2 chars
-  const int max_chars_produced_by_xputc = LOG_OWN_VSNPRINTF_CR_CRLF ? 2: 1;
+  int str_precision = -1;  /* precision for strings (-1 = unlimited) */
 
-	for (;;) {
-		c = *fmt++;					/* Get a char */
-		if (!c)
-			break;				/* End of format? */
+  /* How many chars can be produced by xputc function
+     When \n->\r\n replace is enabled, xputc can produce 2 chars */
+  const int max_chars_produced_by_xputc = LOG_OWN_VSNPRINTF_CR_CRLF ? 2 : 1;
 
-		if (c != '%') { /* Pass through it if not a % sequense */
-          if (length + max_chars_produced_by_xputc >= out_chars_count)
-            return -1;
-				
-          length += xputc(outptr, c);
-          continue;
-		}
-
-		f = 0;
-		c = *fmt++;	  /* Get first char of the sequense */
-    if (c == '0') {				/* Flag: '0' padded */
-			f = kZeroPadded;
-			c = *fmt++;
-    } else {
-			if (c == '-') {			/* Flag: left justified */
-				f = kLeftJustified;
-				c = *fmt++;
-			}
-		}
-
-		for (w = 0; c >= '0' && c <= '9'; c = *fmt++)	/* Minimum width */
-			w = w * 10 + c - '0';
-
-#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-    if (c == '.') { /* precision */
-      f = kPrecisionPadded;
-      c = *fmt++;
-
-      for (prec = 0; c >= '0' && c <= '9'; c = *fmt++)	/* precision */
-        prec = prec * 10 + c - '0';
-    }
-#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-
-		if (c == 'l' || c == 'L') {	/* Prefix: Size is long int */
-			f |= kLongFlag; c = *fmt++;
-		}
-
-    if ((f & kLongFlag) && (c == 'l' || c == 'L')) {  /* Prefix: size is long long */
-      f |= kValue64BitFlag; c = *fmt++;
-    }
-
-		if (!c)
-			break;    /* End of format? */
-
-		d = c;
-		if (d >= 'a')
-			d -= 0x20;
-
-		switch (d) {				/* Type is... */
-		case 'S':  { /* String */
-			int s_len;
-
-			p = va_arg(arp, char*);
-
-			for (j = 0; p[j]; j++);
-            while (!(f & kLeftJustified) && j++ < w) {
-              if (length + max_chars_produced_by_xputc >= out_chars_count)
-                return -1;
-				
-              length += xputc(outptr, ' ');
-			}
-
-			s_len = xputs_helper(outptr, p, out_chars_count, length);
-			if (s_len < 0)
-              return -1;
-
-            length += s_len;
-
-			while (j++ < w) {
-              if (length + max_chars_produced_by_xputc >= out_chars_count)
-                return -1;
-
-              length += xputc(outptr, ' ');
-			}
-			continue;
-        }
-
-        case 'W': /* wide string */ {
-            c = *fmt++;
-            if (!c)
-                break;				/* End of format? */
-
-            if (c != 's' && c != 'S') {
-              if (length + max_chars_produced_by_xputc >= out_chars_count)
-                return -1;
-              length += xputc(outptr, c);
-              continue;
-            }
-
-            int ws_len;
-
-            wchar_t* wp = va_arg(arp, wchar_t*);
-
-            for (j = 0; wp[j]; j++);
-            while (!(f & kLeftJustified) && j++ < w) {
-              if (length + max_chars_produced_by_xputc >= out_chars_count)
-                return -1;
-
-              length += xputc(outptr, ' ');
-            }
-
-            ws_len = xputws_helper(outptr, wp, out_chars_count, length);
-            if (ws_len < 0)
-              return -1;
-
-            length += ws_len;
-
-            while (j++ < w) {
-              if (length + max_chars_produced_by_xputc >= out_chars_count)
-                return -1;
-
-              length += xputc(outptr, ' ');
-            }
-
-            continue;
-        }
-		case 'C':  /* Character */
-            if (length + max_chars_produced_by_xputc >= out_chars_count)
-              return -1;
-			length += xputc(outptr, (char)va_arg(arp, int));
-			continue;
-		case 'B':  /* Binary */
-			r = 2;
-			break;
-		case 'O':					/* Octal */
-			r = 8;
-			break;
-		case 'D':					/* Signed decimal */
-		case 'U':					/* Unsigned decimal */
-			r = 10;
-			break;
-		case 'X':					/* Hexdecimal */
-			r = 16;
-			break;
-    case 'P':         /* Pointer */
-      f |= kLongFlag;
-
-#if INTPTR_MAX == INT64_MAX
-      f |= kValue64BitFlag;
-#endif //INTPTR_MAX == INT64_MAX
-
-      r = 16;
+  for (;;) {
+    ch = *fmt++;
+    if (!ch)
       break;
+
+    if (ch != '%') {
+      /* Pass through regular characters */
+      if (length + max_chars_produced_by_xputc >= out_chars_count)
+        return -1;
+      length += xputc(outptr, ch);
+      continue;
+    }
+
+    /* Reset state for new format specifier */
+    flags = 0;
+    width = 0;
+    str_precision = -1;
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+    precision = 8;
+#endif
+
+    ch = *fmt++;
+    if (!ch)
+      break;
+
+    /* Parse flags */
+    if (ch == '0') {
+      flags = kZeroPadded;
+      ch = *fmt++;
+    } else if (ch == '-') {
+      flags = kLeftJustified;
+      ch = *fmt++;
+    }
+
+    if (!ch)
+      break;
+
+    /* Parse width */
+    while (ch >= '0' && ch <= '9') {
+      width = width * 10 + (unsigned int)(ch - '0');
+      ch = *fmt++;
+    }
+
+    if (!ch)
+      break;
+
+    /* Parse precision */
+    if (ch == '.') {
+      ch = *fmt++;
+      if (!ch)
+        break;
+      
+      if (ch == '*') {
+        /* Precision from argument */
+        flags |= kPrecisionFromArg;
+        int arg_prec = va_arg(arp, int);
+        if (arg_prec >= 0) {
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+          precision = arg_prec;
+#endif
+          str_precision = arg_prec;
+        }
+        ch = *fmt++;
+      } else {
+        /* Precision from format string */
+        flags |= kPrecisionPadded;
+        int prec_val = 0;
+        while (ch >= '0' && ch <= '9') {
+          prec_val = prec_val * 10 + (ch - '0');
+          ch = *fmt++;
+        }
+#if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+        precision = prec_val;
+#endif
+        str_precision = prec_val;
+      }
+    }
+
+    if (!ch)
+      break;
+
+    /* Parse size modifiers */
+    if (ch == 'z') {
+      /* size_t modifier */
+      flags |= kSizeTFlag;
+#if INTPTR_MAX == INT64_MAX
+      flags |= kValue64BitFlag;
+#endif
+      ch = *fmt++;
+    } else if (ch == 'l' || ch == 'L') {
+      flags |= kLongFlag;
+      ch = *fmt++;
+      
+      /* Check for 'll' (long long) */
+      if ((flags & kLongFlag) && (ch == 'l' || ch == 'L')) {
+        flags |= kValue64BitFlag;
+        ch = *fmt++;
+      }
+    }
+
+    if (!ch)
+      break;
+
+    /* Convert to uppercase for switch */
+    digit = ch;
+    if (digit >= 'a' && digit <= 'z')
+      digit -= 0x20;
+
+    switch (digit) {
+    case 'S': {
+      /* String */
+      int s_len;
+      unsigned int str_len;
+
+      str_ptr = va_arg(arp, char*);
+      if (!str_ptr)
+        str_ptr = (char*)"(null)";
+
+      /* Calculate string length (respecting precision) */
+      str_len = 0;
+      while (str_ptr[str_len]) {
+        if (str_precision >= 0 && (int)str_len >= str_precision)
+          break;
+        str_len++;
+      }
+
+      /* Right padding (spaces before string) */
+      pad_len = str_len;
+      while (!(flags & kLeftJustified) && pad_len < width) {
+        if (length + max_chars_produced_by_xputc >= out_chars_count)
+          return -1;
+        length += xputc(outptr, ' ');
+        pad_len++;
+      }
+
+      /* Output string with precision limit */
+      s_len = xputs_helper_n(outptr, str_ptr, out_chars_count, length, str_precision);
+      if (s_len < 0)
+        return -1;
+      length += s_len;
+
+      /* Left padding (spaces after string) */
+      while (pad_len < width) {
+        if (length + max_chars_produced_by_xputc >= out_chars_count)
+          return -1;
+        length += xputc(outptr, ' ');
+        pad_len++;
+      }
+      continue;
+    }
+
+    case 'W': {
+      /* Wide string (%ws or %Ws) */
+      ch = *fmt++;
+      if (!ch)
+        break;
+
+      if (ch != 's' && ch != 'S') {
+        /* Not a wide string, output the W and continue */
+        if (length + max_chars_produced_by_xputc >= out_chars_count)
+          return -1;
+        length += xputc(outptr, ch);
+        continue;
+      }
+
+      int ws_len;
+      unsigned int wstr_len;
+      wchar_t* wstr_ptr = va_arg(arp, wchar_t*);
+      
+      if (!wstr_ptr)
+        wstr_ptr = (wchar_t*)L"(null)";
+
+      /* Calculate string length (respecting precision) */
+      wstr_len = 0;
+      while (wstr_ptr[wstr_len]) {
+        if (str_precision >= 0 && (int)wstr_len >= str_precision)
+          break;
+        wstr_len++;
+      }
+
+      /* Right padding */
+      pad_len = wstr_len;
+      while (!(flags & kLeftJustified) && pad_len < width) {
+        if (length + max_chars_produced_by_xputc >= out_chars_count)
+          return -1;
+        length += xputc(outptr, ' ');
+        pad_len++;
+      }
+
+      ws_len = xputws_helper_n(outptr, wstr_ptr, out_chars_count, length, str_precision);
+      if (ws_len < 0)
+        return -1;
+      length += ws_len;
+
+      /* Left padding */
+      while (pad_len < width) {
+        if (length + max_chars_produced_by_xputc >= out_chars_count)
+          return -1;
+        length += xputc(outptr, ' ');
+        pad_len++;
+      }
+      continue;
+    }
+
+    case 'C':
+      /* Character */
+      if (length + max_chars_produced_by_xputc >= out_chars_count)
+        return -1;
+      length += xputc(outptr, (char)va_arg(arp, int));
+      continue;
+
+    case 'B':
+      /* Binary */
+      radix = 2;
+      break;
+
+    case 'O':
+      /* Octal */
+      radix = 8;
+      break;
+
+    case 'D':
+    case 'I':
+      /* Signed decimal */
+      radix = 10;
+      break;
+
+    case 'U':
+      /* Unsigned decimal */
+      radix = 10;
+      break;
+
+    case 'X':
+      /* Hexadecimal */
+      radix = 16;
+      break;
+
+    case 'P':
+      /* Pointer */
+      flags |= kLongFlag;
+#if INTPTR_MAX == INT64_MAX
+      flags |= kValue64BitFlag;
+#endif
+      radix = 16;
+      break;
+
 #if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
     case 'F':
-      f |= kFloatFlag;
-
+      flags |= kFloatFlag;
 #if INTPTR_MAX == INT64_MAX
-      f |= kValue64BitFlag;
-#endif //INTPTR_MAX == INT64_MAX
-
-      r=10;
+      flags |= kValue64BitFlag;
+#endif
+      radix = 10;
       break;
-#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-		default:					/* Unknown type (passthrough) */
-            if (length + max_chars_produced_by_xputc >= out_chars_count)
-              return -1;
-			length += xputc(outptr, c);
-			continue;
-		}
+#endif /* LOG_OWN_VSNPRINTF_FLOAT_SUPPORT */
 
-		/* Get an argument and put it in numeral */
+    default:
+      /* Unknown type - output as literal */
+      if (length + max_chars_produced_by_xputc >= out_chars_count)
+        return -1;
+      length += xputc(outptr, ch);
+      continue;
+    }
+
+    /* Get argument value based on type and modifiers */
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-    if ((f & kLongFlag) && (f & kValue64BitFlag)) {
-      v64 = va_arg(arp, long long);
-    }
-    else 
-#endif /*LOG_OWN_VSNPRINTF_INT64_SUPPORT*/      
-    if (f & kLongFlag) {
-      v = (long)va_arg(arp, long);
-    }
-    else if (d == 'D') {
-      v = (long)va_arg(arp, int);
+    if ((flags & kLongFlag) && (flags & kValue64BitFlag)) {
+      value64 = va_arg(arp, long long);
+    } else if (flags & kSizeTFlag) {
+      /* size_t handling */
+#if INTPTR_MAX == INT64_MAX
+      value64 = (unsigned long long)va_arg(arp, size_t);
+#else
+      value = (unsigned long)va_arg(arp, size_t);
+#endif
+    } else
+#endif /* LOG_OWN_VSNPRINTF_INT64_SUPPORT */
+    if (flags & kLongFlag) {
+      value = (unsigned long)va_arg(arp, long);
+    } else if (digit == 'D' || digit == 'I') {
+      value = (unsigned long)(long)va_arg(arp, int);
     }
 #if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-    else if (d == 'F') {
-      double fv = (float)va_arg(arp, double);
+    else if (digit == 'F') {
+      double fv = va_arg(arp, double);
       if (fv < 0.0) {
-        f |= kSignFlag;
+        flags |= kSignFlag;
         fv = -fv;
       }
 
-      v = (unsigned long)fv;
+      value = (unsigned long)fv;
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-      v64 = (unsigned long)fv;
-#endif //LOG_OWN_VSNPRINTF_INT64_SUPPORT
+      value64 = (unsigned long long)fv;
+#endif
 
-      double fvp = fv - v;
-      for (int z=0; z<prec; z++) {
-        fvp *= 10.0f;
-        vp = (long)fvp;
-        if (!(f& kPrecisionPadded)) {
-          if (vp * pow(10,prec - z) == (long)(fvp * pow(10,prec - z)))
+      double frac = fv - (double)value;
+      frac_value = 0;
+      for (int z = 0; z < precision; z++) {
+        frac *= 10.0;
+        frac_value = (unsigned long)frac;
+        if (!(flags & kPrecisionPadded)) {
+          double remaining = frac - (double)frac_value;
+          double scale = pow(10.0, precision - z - 1);
+          if ((unsigned long)(remaining * scale) == 0)
             break;
         }
       }
     }
-#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+#endif /* LOG_OWN_VSNPRINTF_FLOAT_SUPPORT */
     else {
-      v = (long)va_arg(arp, unsigned int);
+      value = (unsigned long)va_arg(arp, unsigned int);
     }
 
-		if (!(f & kValue64BitFlag) && d == 'D' && (v & 0x80000000)) {
-			v = 0 - v;
-			f |= kSignFlag;
+    /* Handle signed values */
+    if (!(flags & kValue64BitFlag) && (digit == 'D' || digit == 'I') && (value & 0x80000000)) {
+      value = 0 - value;
+      flags |= kSignFlag;
     }
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-    else if ((f & kValue64BitFlag) && d == 'D' && (v64 & 0x8000000000000000ULL)) {
-      v64 = 0LL - v64;
-      f |= kSignFlag;
+    else if ((flags & kValue64BitFlag) && (digit == 'D' || digit == 'I') && (value64 & 0x8000000000000000ULL)) {
+      value64 = 0ULL - value64;
+      flags |= kSignFlag;
     }
-#endif /*LOG_OWN_VSNPRINTF_INT64_SUPPORT*/
+#endif /* LOG_OWN_VSNPRINTF_INT64_SUPPORT */
 
-		i = 0;
+    /* Convert number to string (in reverse order) */
+    buf_idx = 0;
     int continue_process = 0;
 
 #if LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
-    if (f & kFloatFlag && vp) {
+    /* Handle fractional part first */
+    if ((flags & kFloatFlag) && frac_value) {
       do {
-        {
-          d = (char)(vp % r);
-          vp /= r;
-          continue_process = !!vp;
-        }
+        digit = (char)(frac_value % radix);
+        frac_value /= radix;
+        continue_process = (frac_value != 0);
 
-        if (d > 9)
-          d += (c == 'x') ? 0x27 : 0x07;
+        if (digit > 9)
+          digit += (ch == 'x') ? 0x27 : 0x07;
 
-        s[i++] = d + '0';
-      } while (continue_process && i < sizeof(s));
+        if (buf_idx < sizeof(num_buf))
+          num_buf[buf_idx++] = digit + '0';
+      } while (continue_process && buf_idx < sizeof(num_buf));
 
-      if (i < sizeof(s))
-        s[i++] = '.';
+      if (buf_idx < sizeof(num_buf))
+        num_buf[buf_idx++] = '.';
     }
-#endif //LOG_OWN_VSNPRINTF_FLOAT_SUPPORT
+#endif /* LOG_OWN_VSNPRINTF_FLOAT_SUPPORT */
 
+    /* Convert integer part */
     do {
 #if LOG_OWN_VSNPRINTF_INT64_SUPPORT
-      if (f & kValue64BitFlag) {
-        d = (char)(v64 % (unsigned long long)r);
-        v64 /= r;
-        continue_process = !!v64;
-      }
-      else
-#endif /*LOG_OWN_VSNPRINTF_INT64_SUPPORT*/
+      if (flags & kValue64BitFlag) {
+        digit = (char)(value64 % (unsigned long long)radix);
+        value64 /= radix;
+        continue_process = (value64 != 0);
+      } else
+#endif /* LOG_OWN_VSNPRINTF_INT64_SUPPORT */
       {
-        d = (char)(v % r);
-        v /= r;
-        continue_process = !!v;
+        digit = (char)(value % radix);
+        value /= radix;
+        continue_process = (value != 0);
       }
 
-      if (d > 9)
-        d += (c == 'x') ? 0x27 : 0x07;
+      if (digit > 9)
+        digit += (ch == 'x') ? 0x27 : 0x07;
 
-      s[i++] = d + '0';
-    } while (continue_process && i < sizeof(s));
+      if (buf_idx < sizeof(num_buf))
+        num_buf[buf_idx++] = digit + '0';
+    } while (continue_process && buf_idx < sizeof(num_buf));
 
-		if (f & kSignFlag)
-			s[i++] = '-';
+    /* Add sign if needed */
+    if ((flags & kSignFlag) && buf_idx < sizeof(num_buf))
+      num_buf[buf_idx++] = '-';
 
-		j = i;
-		d = (f & kZeroPadded) ? '0' : ' ';
+    /* Output with padding */
+    pad_len = buf_idx;
+    digit = (flags & kZeroPadded) ? '0' : ' ';
 
-		while (!(f & kLeftJustified) && j++ < w) {
+    /* Right padding */
+    while (!(flags & kLeftJustified) && pad_len < width) {
       if (length + max_chars_produced_by_xputc >= out_chars_count)
         return -1;
-			length += xputc(outptr, d);
-		}
+      length += xputc(outptr, digit);
+      pad_len++;
+    }
 
-		do {
+    /* Output number (reversed) */
+    while (buf_idx > 0) {
       if (length + max_chars_produced_by_xputc >= out_chars_count)
         return -1;
-			length += xputc(outptr, s[--i]);
-		} while (i);
+      length += xputc(outptr, num_buf[--buf_idx]);
+    }
 
-		while (j++ < w) {
+    /* Left padding */
+    while (pad_len < width) {
       if (length + max_chars_produced_by_xputc >= out_chars_count)
         return -1;
-			length += xputc(outptr, ' ');
-		}
-	}
+      length += xputc(outptr, ' ');
+      pad_len++;
+    }
+  }
 
-	return length;
+  return length;
 }
 
 LOG_INTERNAL_USED static int LOG_CDECL xsnprintf(char* buff, int chars_count, const char* fmt, ...) {
@@ -430,11 +613,11 @@ LOG_INTERNAL_USED static int LOG_CDECL xsnprintf(char* buff, int chars_count, co
   return length;
 }
 
-static int LOG_CDECL xvsnprintf(char* buff, int chars_count, const char* fmt, va_list args) {
+LOG_INTERNAL_USED static int LOG_CDECL xvsnprintf(char* buff, int chars_count, const char* fmt, va_list args) {
   using namespace detail::str;
 
   va_list args_copy;
-  va_copy(args_copy,args);
+  va_copy(args_copy, args);
 
   char* buff_ptr = buff;
   int length;
@@ -449,8 +632,8 @@ static int LOG_CDECL xvsnprintf(char* buff, int chars_count, const char* fmt, va
   return length;
 }
 
-}//namespace str
-}//namespace detail
-}//namespace logging
+} /* namespace str */
+} /* namespace detail */
+} /* namespace logging */
 
-#endif /*LOGGER_XPRINTF_HEADER*/
+#endif /* LOGGER_XPRINTF_HEADER */
