@@ -75,7 +75,7 @@ target_include_directories(logger_host PRIVATE
 target_compile_definitions(logger_host PRIVATE 
   LOG_USE_DLL=1 
   $<$<PLATFORM_ID:Windows>:LOG_DLL_NAME="logger_dll.dll">
-  $<$<PLATFORM_ID:Linux>:LOG_DLL_NAME="logger_dll.so">
+  $<$<PLATFORM_ID:Linux>:LOG_DLL_NAME="liblogger_dll.so">
   $<$<PLATFORM_ID:Darwin>:LOG_DLL_NAME="logger_dll.dylib">
 )
 
