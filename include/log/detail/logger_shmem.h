@@ -150,14 +150,32 @@ struct shared_obj {
         MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #else   // LOG_PLATFORM_WINDOWS
 
-#if !defined(LOG_PLATFORM_ANDROID)
+      // The candidate addresses are fixed and low, so on a process that keeps
+      // something of its own there MAP_FIXED would silently replace it. On
+      // Android the runtime's 256 MB java heap starts at 0x2000000 and covers
+      // every candidate: one replaced page leaves the heap in two pieces, the
+      // collector cannot mremap it any more and aborts the process on the
+      // first compaction. Never take a page that is already someone else's —
+      // a logger that is not shared is a far smaller loss.
+#ifdef MAP_FIXED_NOREPLACE
+      const int fixed_flag = MAP_FIXED_NOREPLACE;
+#else
+      // Without the kernel guarantee the address has to be checked by hand,
+      // and that check races with every other thread in the process.
       int page_bits;
       if (get_page_bits((void*)page, &page_bits)) continue;
+      const int fixed_flag = MAP_FIXED;
 #endif
-
       result_ptr =
-        mmap((void*)page, shared_page_mem_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-          MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
+        mmap((void*)page, shared_page_mem_size, PROT_READ | PROT_WRITE,
+          MAP_PRIVATE | fixed_flag | MAP_ANONYMOUS, -1, 0);
+
+      // Kernels older than the flag ignore it and treat the address as a mere
+      // hint. The page is only of use where the other modules look for it.
+      if (result_ptr && result_ptr != invalid_ptr && result_ptr != (void*)page) {
+        munmap(result_ptr, shared_page_mem_size);
+        continue;
+      }
 #endif  // LOG_PLATFORM_WINDOWS
 
       if (result_ptr && result_ptr != invalid_ptr) {
