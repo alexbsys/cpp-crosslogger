@@ -295,9 +295,11 @@ static void crash_handler(int sig, siginfo_t* info, void* secret) {
     { SIGFPE, "SIGFPE" },
     { SIGSEGV, "SIGSEGV" },
     { SIGILL, "SIGILL" },
-#ifndef __APPLE__
+// SIGSTKFLT is not universal: besides macOS it is missing on MIPS, SPARC and
+// Alpha. Test for the signal itself rather than for a platform.
+#ifdef SIGSTKFLT
     { SIGSTKFLT, "SIGSTKFLT" },
-#endif //__APPLE__
+#endif //SIGSTKFLT
     { SIGTRAP, "SIGTRAP" },
     { -1, "OTHER" }
   };
